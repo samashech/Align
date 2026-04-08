@@ -31,32 +31,21 @@
 
 ## 📂 Project Structure
 
-<b>Project RAIoT/ <br>
-├── app.py              # Flask Server<br>
-├── analyzer.py         # Resume Parsing<br>
-├── scraper.py          # Search URL Generator<br>
-├── visualizer.py       # Data Visualization<br>
-├── templates/          # HTML UI<br>
-├── static/             # Charts<br>
-└── uploads/            # Temp storage<br>
+## 📂 Project Structure
+
+- `main.py`: The central orchestrator for the scraping, analysis, and notification pipeline.
+- `scraper.py`: Handles stealth browsing and job data extraction.
+- `analyzer.py`: Contains logic for skill extraction and match score calculation.
+- `visualizer.py`: Generates the trend charts.
+- `notifier.py`: Manages Telegram API communications.
+- `requirements.txt`: Lists all Python dependencies.
+
+
 🚀<b> Getting Started </b>
 1. <b>Prerequisites</b>
 Make sure you have Python 3.10+ installed.
 
-2.<b> Installation</b>
-Run these commands in your terminal:
 
-Bash<br>
-git clone [https://github.com/samashech/Auto-Job-analyzer.git](https://github.com/samashech/Auto-Job-analyzer.git)<br>
-cd RAIoT<br>
-python -m venv venv<br>
-source venv/bin/activate.fish<br>
-pip install -r requirements.txt<br>
-playwright install chromium<br>
-3. Running the App<br>
-Bash<br>
-python app.py<br>
-Visit http://127.0.0.1:5000 in your browser.<br>
 
 ## ⚙️ Installation
 
@@ -100,15 +89,6 @@ To enable Telegram notifications:
 2. Get your `TELEGRAM_CHAT_ID`.
 3. Update the credentials in `notifier.py`.
 4. Uncomment the `send_telegram_alert` call in `main.py`.
-
-## 📂 Project Structure
-
-- `main.py`: The central orchestrator for the scraping, analysis, and notification pipeline.
-- `scraper.py`: Handles stealth browsing and job data extraction.
-- `analyzer.py`: Contains logic for skill extraction and match score calculation.
-- `visualizer.py`: Generates the trend charts.
-- `notifier.py`: Manages Telegram API communications.
-- `requirements.txt`: Lists all Python dependencies.
 
 
 🛡️ <b>Stealth & Anti-Bot Measures</b><br>
