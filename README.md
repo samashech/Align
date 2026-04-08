@@ -15,7 +15,7 @@
 
 ## 📂 Project Structure
 
-Project RAIoT/ <br>
+<b>Project RAIoT/ <br>
 ├── app.py              # Flask Server<br>
 ├── analyzer.py         # Resume Parsing<br>
 ├── scraper.py          # Search URL Generator<br>
@@ -23,28 +23,28 @@ Project RAIoT/ <br>
 ├── templates/          # HTML UI<br>
 ├── static/             # Charts<br>
 └── uploads/            # Temp storage<br>
-🚀 Getting Started
-1. Prerequisites
+🚀<b> Getting Started </b>
+1. <b>Prerequisites</b>
 Make sure you have Python 3.10+ installed.
 
-2. Installation
+2.<b> Installation</b>
 Run these commands in your terminal:
 
-Bash
-git clone [https://github.com/samashech/Auto-Job-analyzer.git](https://github.com/samashech/Auto-Job-analyzer.git)
-cd RAIoT
-python -m venv venv
-source venv/bin/activate.fish
-pip install -r requirements.txt
-playwright install chromium
-3. Running the App
-Bash
-python app.py
-Visit http://127.0.0.1:5000 in your browser.
+Bash<br>
+git clone [https://github.com/samashech/Auto-Job-analyzer.git](https://github.com/samashech/Auto-Job-analyzer.git)<br>
+cd RAIoT<br>
+python -m venv venv<br>
+source venv/bin/activate.fish<br>
+pip install -r requirements.txt<br>
+playwright install chromium<br>
+3. Running the App<br>
+Bash<br>
+python app.py<br>
+Visit http://127.0.0.1:5000 in your browser.<br>
 
-🛡️ Stealth & Anti-Bot Measures
-This project implements playwright-stealth and randomized user-agents to mimic human behavior.
+🛡️ <b>Stealth & Anti-Bot Measures</b><br>
+This project implements playwright-stealth and randomized user-agents to mimic human behavior.<br>
 
-👨‍💻 Authors
-Sameer, Pranav Sahu, and Saksham
-Automating the path to the next big opportunity.
+👨‍💻 <b>Authors</b><br>
+<b>Sameer, Pranav Sahu, and Saksham</b><br>
+Automating the path to the next big opportunity.<br>
