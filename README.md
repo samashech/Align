@@ -1,86 +1,68 @@
-# Project RAIoT: Automated Job Market Analyzer
+# RAIoT: Automated Job Market Intelligence & Matcher 🚀
 
-Project RAIoT is a Python-based automation tool designed to help developers and AI engineers stay ahead of the job market. It scrapes real-time job listings from Indeed, extracts in-demand skills using natural language processing (NLP) techniques, calculates a personalized match score against your profile, and visualizes the results.
+**RAIoT** (Resume Analysis & Intelligent Opportunity Tracking) is a full-stack Python application that bridges the gap between a candidate's resume and the current job market. It uses NLP to analyze a user's seniority and skills, generates market trend visualizations, and provides direct application links to the top 10 job platforms.
 
----
-
-## 🚀 Features
-
-- **Advanced Web Scraping**  
-  Utilizes Playwright with stealth configurations to bypass anti-bot mechanisms and extract job descriptions from Indeed.
-
-- **Skill Extraction**  
-  Automatically identifies key technologies and skills (e.g., Python, SQL, Docker, Machine Learning) mentioned in job postings.
-
-- **Match Scoring**  
-  Compares your personal skill set against the top requirements of the current market to provide a percentage match score.
-
-- **Data Visualization**  
-  Generates clear, professional bar charts using Seaborn and Matplotlib to highlight trending technologies.
-
-- **Telegram Notifications (Optional)**  
-  Sends automated summaries and trend charts directly to your Telegram chat.
+![Python](https://img.shields.io/badge/python-3.14+-blue.svg)
+![Flask](https://img.shields.io/badge/framework-Flask-green.svg)
+![Playwright](https://img.shields.io/badge/automation-Playwright-orange.svg)
 
 ---
 
-## 🛠 Tech Stack
+## 🌟 Key Features
 
-- **Language**: Python 3.x  
-- **Scraping**: Playwright, Playwright-Stealth  
-- **Data Analysis**: Pandas, Regex (`re`)  
-- **Visualization**: Matplotlib, Seaborn  
-- **API Integration**: Telegram Bot API (via Requests)  
-
----
-
-## 📋 Prerequisites
-
-Before running the project, ensure you have:
-
-- Python 3.8+
-- Node.js (required for Playwright)
+- **📄 AI Resume Parser:** Automatically extracts technical skills and contact info from PDF resumes using `PyPDF2` and Regex.
+- **📈 Seniority Detection:** Differentiates between **Fresher** and **Experienced** candidates to filter relevant job opportunities.
+- **📊 Visual Business Intelligence:** Generates real-time bar charts of your skill demand scores using `Seaborn` and `Matplotlib`.
+- **🕵️ Stealth Meta-Scraper:** Dynamically generates optimized search queries for 10+ major job boards including LinkedIn, Indeed, Glassdoor, and Wellfound.
+- **🌐 Interactive Dashboard:** A clean, modern Web UI built with Flask for seamless file uploads and instant results.
 
 ---
 
-## ⚙️ Installation
+## 🛠️ Tech Stack
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/your-username/project-raiot.git
-cd project-raiot
-2. Create and activate a virtual environment
+- **Backend:** Python (Flask)
+- **Data Science:** Pandas, Matplotlib, Seaborn
+- **Automation/Scraping:** Playwright, Playwright-Stealth
+- **NLP/Text Processing:** PyPDF2, Regular Expressions
+- **Frontend:** HTML5, CSS3 (Modern Dark Theme), JavaScript (Fetch API)
+
+---
+
+## 📂 Project Structure
+
+```text
+Project RAIoT/
+├── app.py              # Flask Server & Orchestrator
+├── analyzer.py         # Resume Parsing & Skill Extraction
+├── scraper.py          # Dynamic Job Search URL Generator
+├── visualizer.py       # Data Visualization Logic
+├── notifier.py         # Telegram Integration (Optional/Commented)
+├── templates/          # HTML Dashboard UI
+├── static/             # Generated Charts & Styles
+└── uploads/            # Temporary File Processing
+
+🚀 Getting Started
+1. Prerequisites
+Make sure you have Python 3.10+ installed.
+
+2. Installation
+Clone the repository and install the dependencies:
+
+Bash
+git clone [https://github.com/your-username/RAIoT.git](https://github.com/your-username/RAIoT.git)
+cd RAIoT
 python -m venv venv
-source venv/bin/activate   # On Windows: venv\Scripts\activate
-3. Install dependencies
+source venv/bin/activate.fish  # Use .bash or .ps1 depending on your shell
 pip install -r requirements.txt
-🚀 Usage
-1. Configure your profile
+playwright install chromium
+3. Running the App
+Bash
+python app.py
+Visit http://127.0.0.1:5000 in your browser.
 
-Open main.py and update the MY_PROFILE_SKILLS list with your current skills.
+🛡️ Stealth & Anti-Bot Measures
+This project implements playwright-stealth and randomized user-agents to mimic human behavior, ensuring that job boards do not immediately flag the automated requests.
 
-2. Run the analyzer
-python main.py
-3. View results
-Check the console for your Match Score
-Open trend_chart.png to view the skill trends
-🤖 Optional: Telegram Alerts
-
-To enable Telegram notifications:
-
-Create a bot via @BotFather and get your TELEGRAM_BOT_TOKEN
-Get your TELEGRAM_CHAT_ID
-Update credentials in notifier.py
-Uncomment send_telegram_alert() in main.py
-📂 Project Structure
-project-raiot/
-│
-├── main.py          # Orchestrates full pipeline
-├── scraper.py       # Handles job scraping
-├── analyzer.py      # Skill extraction + scoring
-├── visualizer.py    # Graph generation
-├── notifier.py      # Telegram integration
-├── requirements.txt # Dependencies
-└── README.md
-⚠️ Disclaimer
-
-This tool is for educational purposes only. Always respect the robots.txt and Terms of Service of websites you scrape. Avoid excessive requests.
+👨‍💻 Author
+Sameer, Pranav Sahu and Saksham 
+Automating the path to the next big opportunity.
