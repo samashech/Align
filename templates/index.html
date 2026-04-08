@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RAIoT Dashboard</title>
+    <style>
+        body { background: #0f172a; color: white; font-family: sans-serif; padding: 40px; }
+        .container { max-width: 800px; margin: auto; background: #1e293b; padding: 20px; border-radius: 10px; }
+        .job-card { background: #334155; padding: 10px; margin: 10px 0; border-radius: 5px; display: flex; justify-content: space-between; }
+        .btn { background: #6366f1; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+        img { max-width: 100%; margin-top: 20px; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RAIoT Job Analyzer</h1>
+        <input type="file" id="resumeFile">
+        <button class="btn" onclick="upload()">Analyze Resume</button>
+
+        <div id="results" style="display:none">
+            <h3>Profile: <span id="level"></span></h3>
+            <div id="chart"></div>
+            <div id="links"></div>
+        </div>
+    </div>
+
+    <script>
+        async function upload() {
+            const file = document.getElementById('resumeFile').files[0];
+            const formData = new FormData();
+            formData.append('resume', file);
+
+            const res = await fetch('/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('level').innerText = data.level;
+            document.getElementById('chart').innerHTML = `<img src="${data.chart_url}?t=${new Date().getTime()}">`;
+            
+            let linksHtml = "<h4>Top Sites for you:</h4>";
+            data.jobs.forEach(j => {
+                linksHtml += `<div class="job-card"><span>${j.name}</span><a href="${j.url}" target="_blank" style="color:cyan">Apply</a></div>`;
+            });
+            document.getElementById('links').innerHTML = linksHtml;
+        }
+    </script>
+</body>
+</html>

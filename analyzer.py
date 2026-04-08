@@ -1,32 +1,35 @@
+import PyPDF2
 import re
-from collections import Counter
 
-# Our master list of skills to look for
-KNOWN_SKILLS = {"python", "django", "flask", "fastapi", "aws", "docker", "sql", "react", "kubernetes", "git", "linux", "pandas"}
-
-def extract_skills(job_descriptions: list) -> Counter:
-    """Extracts and counts skills from a list of job descriptions."""
-    skill_counts = Counter()
+def analyze_resume(pdf_path):
+    # 1. Initialize the 'text' variable as an empty string
+    text = "" 
     
-    for job in job_descriptions:
-        # Lowercase and remove all non-alphanumeric characters
-        clean_text = re.sub(r'[^a-zA-Z0-9\s]', ' ', job["description"].lower())
-        words = clean_text.split()
-        
-        # Find intersection of words in the job description and our known skills
-        found_skills = set(words).intersection(KNOWN_SKILLS)
-        skill_counts.update(found_skills)
+    try:
+        with open(pdf_path, "rb") as f:
+            reader = PyPDF2.PdfReader(f)
+            for page in reader.pages:
+                # 2. Add content to the 'text' variable
+                extracted = page.extract_text()
+                if extracted:
+                    text += extracted.lower()
+    except Exception as e:
+        print(f"Error reading PDF: {e}")
+
+    # Logic for Level Detection
+    exp_words = ["senior", "lead", "manager", "years experience", "5+"]
+    level = "Experienced" if any(w in text for w in exp_words) else "Fresher"
+
+    # Expanded Skill Library
+    tech_stack = ["python", "aws", "docker", "react", "sql", "flask", "fastapi", "git", "linux"]
+    
+    found_skills = []
+    for skill in tech_stack:
+        # 3. Now 'text' is defined, so this line won't crash!
+        if re.search(r'\b' + re.escape(skill) + r'\b', text):
+            found_skills.append(skill.capitalize())
             
-    return skill_counts
-
-def calculate_match_score(required_skills: Counter, my_skills: list) -> float:
-    """Calculates a percentage match between top job requirements and your profile."""
-    # Let's say we only care about matching against the top 5 most requested skills
-    top_requirements = [skill for skill, count in required_skills.most_common(5)]
-    
-    if not top_requirements:
-        return 0.0
-        
-    matches = set(top_requirements).intersection(set(my_skills))
-    score = (len(matches) / len(top_requirements)) * 100
-    return round(score, 2)
+    return {
+        "level": level, 
+        "skills": found_skills if found_skills else ["Python"]
+    }

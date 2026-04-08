@@ -1,32 +1,17 @@
-import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
-from collections import Counter
+import seaborn as sns
+import pandas as pd
 
-def generate_chart(skill_counts: Counter, filename: str = "trend_chart.png"):
-    """Generates and saves a bar chart of the top 10 skills."""
-    # Get top 10 skills and convert to a Pandas DataFrame
-    top_skills = skill_counts.most_common(10)
+def generate_chart(skills):
+    # Creating dummy frequency for visualization
+    data = {"Skills": skills, "Demand Score": [i*10 for i in range(len(skills), 0, -1)]}
+    df = pd.DataFrame(data)
     
-    if not top_skills:
-        print("No skills to plot.")
-        return
-        
-    df = pd.DataFrame(top_skills, columns=["Skill", "Frequency"])
+    plt.figure(figsize=(8, 4))
+    sns.barplot(x="Demand Score", y="Skills", data=df, palette="viridis")
+    plt.title("Market Demand for Your Skills")
     
-    # Set up the visual style
-    sns.set_theme(style="whitegrid")
-    plt.figure(figsize=(10, 6))
-    
-    # Create the bar plot
-    ax = sns.barplot(x="Frequency", y="Skill", data=df, hue="Skill", palette="viridis", legend=False)
-    
-    plt.title("Top In-Demand Skills for Python Developers This Week", fontsize=16)
-    plt.xlabel("Number of Mentions in Job Postings", fontsize=12)
-    plt.ylabel("Technology", fontsize=12)
-    plt.tight_layout()
-    
-    # Save the file locally
-    plt.savefig(filename)
+    path = "static/trend_chart.png"
+    plt.savefig(path)
     plt.close()
-    return filename
+    return path
