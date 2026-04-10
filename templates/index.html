@@ -620,8 +620,10 @@
                     professionalEmail: appState.registeredEmail,
                     contactNumber: data.phone || '',
                     jobTitle: data.level,
+                    jobType: data.job_type || 'Full-time',
                     technicalSkills: data.skills ? data.skills.join(', ') : '',
-                    chartUrl: data.chart_url
+                    chartUrl: data.chart_url,
+                    resumeUrl: data.resume_url
                 };
 
                 // Map jobs immediately since they come directly from /upload
@@ -692,6 +694,16 @@
             const resume = appState.resume;
             const container = document.getElementById('resumeContainer');
 
+            if (resume.uploadedMode && resume.resumeUrl && resume.fileName.toLowerCase().endsWith('.pdf')) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <h2 class="text-2xl font-bold text-slate-900 mb-6">Your Uploaded Resume</h2>
+                        <iframe src="${resume.resumeUrl}" class="w-full h-[800px] border border-slate-200 rounded-lg"></iframe>
+                    </div>
+                `;
+                return;
+            }
+
             let html = `
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                     <!-- Photo & Contact -->
@@ -699,7 +711,7 @@
                         ${appState.resumePhoto ? `<img src="${appState.resumePhoto}" alt="Profile" class="w-32 h-32 rounded-full object-cover border-4 border-blue-600 mb-4">` : `<div class="w-32 h-32 rounded-full bg-slate-200 flex items-center justify-center mb-4 text-slate-400 text-4xl">👤</div>`}
                         <h1 class="text-2xl font-bold text-slate-900 text-center">${resume.fullName || 'Your Name'}</h1>
                         <p class="text-blue-600 font-semibold text-center">${resume.jobTitle || 'Professional Title'}</p>
-                        <p class="text-slate-500 text-xs font-semibold text-center uppercase tracking-wider mt-1">Seeking: ${data.job_type || 'Full-time'}</p>
+                        <p class="text-slate-500 text-xs font-semibold text-center uppercase tracking-wider mt-1">Seeking: ${resume.jobType || 'Full-time'}</p>
                         <div class="mt-6 pt-6 border-t border-slate-200 w-full text-sm space-y-3 text-slate-700">
                             <div class="break-words"><strong>Email:</strong> ${resume.professionalEmail || ''}</div>
                             <div><strong>Phone:</strong> ${resume.contactNumber || ''}</div>

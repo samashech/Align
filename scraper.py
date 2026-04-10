@@ -55,75 +55,88 @@ LEGIT_SITES = {
         {"name": "WeWorkRemotely", "base": "https://weworkremotely.com/remote-jobs/search?term={query}"},
         {"name": "Hubstaff Talent", "base": "https://talent.hubstaff.com/search/jobs?search={query}"}
     ]
-}
+    }
+from playwright_stealth import Stealth
 
 def get_dynamic_job_links(skills, level, job_type="Full-time"):
     """
-    Combines Playwright stealth scraping (to get actual specific latest job postings)
-    with top 10 dynamic search URLs for the user's top 10 skills.
+    Uses Playwright stealth and BeautifulSoup to dynamically scrape actual job postings.
+    Falls back to generating search URLs if scraping fails.
     """
-    # The system matches the current user's top 10 skills
-    top_skills = skills[:10] if skills else ["Developer"]
-    query = " ".join(top_skills)
-    
-    encoded_query = urllib.parse.quote(query)
-    dash_query = query.replace(' ', '-').replace('/', '-')
-    
+    top_skills = skills[:5] if skills else ["Developer"]
+    query_skills = [s.lower().replace(" ", "-").replace("/", "-") for s in top_skills[:2]]
+    query = "-".join(query_skills)
+
     results = []
-    
-    # 1. Attempt to stealth scrape actual specific latest jobs from a generic board 
-    # Using Playwright & BeautifulSoup
+
+    # Try Dynamic Scraping First (Internshala handles both jobs and internships)
     try:
+        base_path = "internships" if job_type == "Internship" else "jobs"
+        scrape_url = f"https://internshala.com/{base_path}/keywords-{query}/"
+
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                viewport={'width': 1280, 'height': 720}
             )
             page = context.new_page()
-            stealth_sync(page)
-            
-            # Example scraping from an open remote board (WeWorkRemotely) as it's less hostile to scraping
-            scrape_url = f"https://weworkremotely.com/remote-jobs/search?term={encoded_query}"
-            page.goto(scrape_url, timeout=15000)
-            # Wait for jobs to load
-            time.sleep(2) 
+            Stealth().apply_stealth_sync(page)
+
+            page.goto(scrape_url, wait_until="domcontentloaded", timeout=20000)
             html = page.content()
             soup = BeautifulSoup(html, "html.parser")
-            
-            job_cards = soup.find_all("li", class_="feature")
-            for card in job_cards[:3]: # Get top 3 latest scraped jobs
-                title_elem = card.find("span", class_="title")
-                company_elem = card.find("span", class_="company")
-                link_elem = card.find("a")
-                
-                if title_elem and link_elem:
-                    title = title_elem.text.strip()
-                    company = company_elem.text.strip() if company_elem else "Unknown Company"
-                    link = "https://weworkremotely.com" + link_elem["href"]
-                    
-                    results.append({
-                        "name": "WeWorkRemotely (Scraped)",
-                        "title": title,
-                        "company": company,
-                        "url": link,
-                        "description": f"Actual recent posting scraped for your top skills: {', '.join(top_skills[:3])}."
-                    })
+
+            cards = soup.find_all("div", class_="internship_meta")
+
+            for card in cards:
+                if len(results) >= 10:
+                    break
+
+                title_a = card.find("a", class_="job-title-href")
+                if not title_a:
+                    continue
+                title = title_a.text.strip()
+                link = "https://internshala.com" + title_a.get("href", "")
+
+                company_elem = card.find("p", class_="company-name")
+                company = company_elem.text.strip() if company_elem else "Unknown Company"
+
+                desc_elem = card.find("div", class_="text")
+                desc = desc_elem.text.strip()[:150] + "..." if desc_elem else f"Matched {job_type} opportunity for your skills: {', '.join(top_skills)}."
+
+                results.append({
+                    "name": "Internshala",
+                    "title": title,
+                    "company": company,
+                    "url": link,
+                    "description": desc,
+                    "source": "Internshala"
+                })
             browser.close()
     except Exception as e:
-        print(f"Playwright scraping failed/skipped: {e}")
-        
-    # 2. Append the Top 10 legitimate job boards matching the exact Job Type
-    # This ensures the user gets exact links to all applicable roles separated by their requested type.
-    category_sites = LEGIT_SITES.get(job_type, LEGIT_SITES["Full-time"])
-    
-    for site in category_sites:
-        url = site["base"].format(query=encoded_query, dash_query=dash_query)
-        results.append({
-            "name": site["name"],
-            "title": f"{job_type} Role - {site['name']}",
-            "company": "Various Companies",
-            "url": url,
-            "description": f"Top 10 matched {job_type} opportunities for your top 10 skills: {', '.join(top_skills)}."
-        })
-        
+        print(f"Scraping failed: {e}")
+
+    # Fallback to static URLs if scraping didn't yield enough results
+    if len(results) < 5:
+        fallback_query = " ".join(top_skills)
+        encoded_query = urllib.parse.quote(fallback_query)
+        dash_query = fallback_query.replace(' ', '-').replace('/', '-')
+
+        category_sites = LEGIT_SITES.get(job_type, LEGIT_SITES["Full-time"])
+
+        for site in category_sites:
+            if len(results) >= 10:
+                break
+            url = site["base"].format(query=encoded_query, dash_query=dash_query)
+            # Avoid adding the same company if it was somehow scraped
+            if not any(r["name"] == site["name"] for r in results):
+                results.append({
+                    "name": site["name"],
+                    "title": f"{job_type} Role - {site['name']}",
+                    "company": "Various Companies",
+                    "url": url,
+                    "description": f"Matched {job_type} opportunities for your top 5 skills: {', '.join(top_skills)}."
+                })
+
     return results

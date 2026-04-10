@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from analyzer import analyze_resume
 from scraper import get_dynamic_job_links
 from visualizer import generate_chart
@@ -25,6 +25,11 @@ with app.app_context():
 def index():
     """Serves the main dashboard HTML."""
     return render_template('index.html')
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    """Serves uploaded resumes."""
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -85,7 +90,8 @@ def upload_file():
         "skills": user_profile['skills'],
         "job_type": job_type,
         "jobs": jobs,
-        "chart_url": "/static/trend_chart.png"
+        "chart_url": "/static/trend_chart.png",
+        "resume_url": f"/uploads/{file.filename}"
     })
 
 if __name__ == '__main__':
