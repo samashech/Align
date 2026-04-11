@@ -116,9 +116,11 @@ async function handleResumeUpload() {
     formData.append('preferred_location', preferredLocation);
 
     try {
-        // Step 1: Extracting skills
+        // Show a brief loading state
+        const overlay = document.getElementById('processingOverlay');
+        overlay.classList.remove('hidden');
         updateProcessingStep(1);
-        
+
         const response = await fetch('/upload', {
             method: 'POST',
             body: formData
@@ -127,57 +129,39 @@ async function handleResumeUpload() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Upload failed');
 
-        appState.fullName = data.name || appState.fullName;
-        appState.registeredEmail = data.email || appState.registeredEmail;
-
-        appState.resume = {
-            fileName: file.name,
-            uploadedMode: true,
-            fullName: appState.fullName,
-            professionalEmail: appState.registeredEmail,
-            contactNumber: data.phone || '',
-            jobTitle: data.level,
-            jobType: data.job_type || 'Full-time',
-            technicalSkills: data.skills ? data.skills.join(', ') : '',
-            chartUrl: data.chart_url,
-            resumeUrl: data.resume_url
+        // Save user data to session storage
+        const userData = {
+            id: data.user_id,
+            name: data.name || appState.fullName,
+            email: data.email || appState.registeredEmail,
+            phone: data.phone || '',
+            level: data.level,
+            skills: data.skills || [],
+            job_type: data.job_type || jobType,
+            experience_level: data.experience_level || experienceLevel,
+            preferred_location: data.preferred_location || preferredLocation,
+            resume_url: data.resume_url,
+            fileName: file.name
         };
+        sessionStorage.setItem('raiot_user', JSON.stringify(userData));
+        
+        appState.userId = data.user_id;
+        appState.fullName = userData.name;
+        appState.registeredEmail = userData.email;
 
-        // Step 2 & 3: Scraping jobs (happens on backend)
+        // Step 2: Redirect to complete profile page
         updateProcessingStep(2);
         await sleep(500);
-        updateProcessingStep(3);
-        
-        // Map jobs immediately
-        if (data.jobs && data.jobs.length > 0) {
-            appState.jobs = data.jobs.map((job, index) => ({
-                id: index + 1,
-                title: job.title || `${data.level} Role`,
-                company: job.company || "Various Companies",
-                source: job.name || job.source || "Web Scraper",
-                matchScore: job.relevance_score || 0,
-                description: job.description || `Job matching your skills: ${data.skills ? data.skills.slice(0,3).join(', ') : 'N/A'}`,
-                url: job.url,
-                skillCat: job.name || "Scraped Result"
-            }));
-        } else {
-            appState.jobs = [];
-        }
 
-        // Step 4: Preparing dashboard
-        updateProcessingStep(4);
-        await sleep(500);
-        
-        // Hide loading overlay
+        // Hide overlay and redirect
         overlay.classList.add('hidden');
-        
-        showBanner(`Resume analyzed! Found ${data.skills ? data.skills.length : 0} skills and ${data.jobs ? data.jobs.length : 0} relevant jobs.`, 'success', 'notifyBanner');
-        
-        // Transition to resume display page
+        showBanner('Resume analyzed! Redirecting to complete your profile...', 'success', 'notifyBanner');
+
+        // Redirect to complete profile page
         setTimeout(() => {
-            document.getElementById('resumeEntryPage').classList.add('hidden');
-            generateResumeDisplay();
-        }, 500);
+            window.location.href = data.redirect || '/complete-profile';
+        }, 1000);
+        
     } catch (error) {
         overlay.classList.add('hidden');
         showBanner(error.message, 'error', 'notifyBanner');
@@ -424,7 +408,74 @@ function viewMyResume() {
 async function loadAndDisplayJobs() {
     switchTab('jobs');
 
-    if (appState.resume && !appState.resume.uploadedMode && (appState.jobs.length === 0)) {
+    // If we have a user ID, load from database first
+    if (appState.userId) {
+        await loadJobsFromDatabase(appState.userId);
+    } else {
+        // Check if we have live jobs from session storage
+        const storedJobs = sessionStorage.getItem('raiot_jobs');
+        if (storedJobs) {
+            appState.jobs = JSON.parse(storedJobs);
+        } else {
+            // Fallback: fetch jobs normally
+            await fetchJobsFallback();
+        }
+    }
+
+    renderJobs();
+    renderInterested();
+}
+
+function connectToRealTimeJobStream() {
+    if (!appState.userId) return;
+    
+    const eventSource = new EventSource(`/stream-jobs/${appState.userId}`);
+    
+    eventSource.onmessage = function(event) {
+        const message = JSON.parse(event.data);
+        
+        if (message.type === 'init') {
+            // Initial state - replace all jobs
+            appState.jobs = message.data.jobs.map((job, index) => ({
+                id: index + 1,
+                title: job.title || `Role`,
+                company: job.company || "Various Companies",
+                source: job.name || job.source || "Scraper",
+                matchScore: job.relevance_score || 0,
+                description: job.description || '',
+                url: job.url,
+                skillCat: job.name || "Scraped Result"
+            }));
+            renderJobs();
+        } else if (message.type === 'job') {
+            // New job found - add to list
+            const newJob = {
+                id: appState.jobs.length + 1,
+                title: message.data.title || `Role`,
+                company: message.data.company || "Various Companies",
+                source: message.data.name || message.data.source || "Scraper",
+                matchScore: message.data.relevance_score || 0,
+                description: message.data.description || '',
+                url: message.data.url,
+                skillCat: message.data.name || "Scraped Result"
+            };
+            appState.jobs.push(newJob);
+            renderJobs();
+        } else if (message.type === 'complete') {
+            // Scraping complete
+            console.log(`Scraping complete: ${message.data.total_jobs} jobs found`);
+        }
+    };
+    
+    eventSource.onerror = function() {
+        console.log('SSE connection closed');
+        eventSource.close();
+    };
+}
+
+async function fetchJobsFallback() {
+    // Fallback for when SSE is not available
+    if (appState.resume && appState.jobs.length === 0) {
         showBanner('Fetching matched jobs...', 'info', 'notifyBannerDash');
         try {
             const response = await fetch('/fetch_jobs', {
@@ -453,17 +504,37 @@ async function loadAndDisplayJobs() {
             } else {
                 appState.jobs = [];
             }
-            if (data.chart_url) {
-                appState.resume.chartUrl = data.chart_url;
-            }
         } catch (error) {
             showBanner(error.message, 'error', 'notifyBannerDash');
             appState.jobs = [];
         }
     }
+}
 
-    renderJobs();
-    renderInterested();
+function refreshJobs() {
+    console.log(`🔄 Manually refreshing jobs...`);
+    showBanner('Loading latest jobs...', 'info', 'notifyBannerDash');
+    
+    // Stop any existing polling
+    if (jobPollingInterval) {
+        clearInterval(jobPollingInterval);
+        jobPollingInterval = null;
+    }
+    
+    // Reload from database
+    if (appState.userId) {
+        loadJobsFromDatabase(appState.userId);
+    } else {
+        // Try to get user from session
+        const userData = sessionStorage.getItem('raiot_user');
+        if (userData) {
+            const user = JSON.parse(userData);
+            appState.userId = user.id;
+            loadJobsFromDatabase(user.id);
+        } else {
+            showBanner('No user session found. Please upload a resume first.', 'error', 'notifyBannerDash');
+        }
+    }
 }
 
 function renderJobs() {
@@ -608,3 +679,144 @@ document.getElementById('authToggleBtn').addEventListener('click', function() {
     toggleAuthMode(isSignupMode ? 'login' : 'signup');
 });
 document.getElementById('resumeBuilderForm').addEventListener('submit', handleResumeBuilderSubmit);
+
+// Handle hash-based routing
+window.addEventListener('hashchange', handleHashRoute);
+window.addEventListener('load', handleHashRoute);
+
+function handleHashRoute() {
+    const hash = window.location.hash;
+    
+    if (hash === '#dashboard') {
+        // Check if user has jobs in session
+        const userData = sessionStorage.getItem('raiot_user');
+        
+        if (userData) {
+            const user = JSON.parse(userData);
+            appState.userId = user.id;
+            appState.fullName = user.name;
+            appState.registeredEmail = user.email;
+            appState.resume = {
+                uploadedMode: true,
+                fullName: user.name,
+                professionalEmail: user.email,
+                technicalSkills: user.skills ? user.skills.join(', ') : ''
+            };
+            
+            // Show dashboard
+            document.getElementById('landingPage').classList.add('hidden');
+            document.getElementById('resumeEntryPage').classList.add('hidden');
+            document.getElementById('resumeBuilderPage').classList.add('hidden');
+            document.getElementById('resumeDisplayPage').classList.add('hidden');
+            document.getElementById('dashboardPage').classList.remove('hidden');
+            
+            // Load jobs from database directly (most reliable)
+            loadJobsFromDatabase(user.id);
+        } else {
+            // No user data, redirect to landing
+            window.location.hash = '';
+        }
+    }
+}
+
+async function loadJobsFromDatabase(userId) {
+    try {
+        console.log(`=== LOADING JOBS FROM DATABASE ===`);
+        console.log(`User ID: ${userId}`);
+        console.log(`Session jobs before load: ${JSON.parse(sessionStorage.getItem('raiot_jobs') || '[]').length}`);
+        
+        const response = await fetch(`/get-jobs/${userId}`);
+        const data = await response.json();
+        
+        console.log(`Database response: ${data.total} jobs (source: ${data.source})`);
+        
+        if (data.jobs && data.jobs.length > 0) {
+            console.log(`✅ Loaded ${data.total} jobs from ${data.source}`);
+            console.log(`First job:`, data.jobs[0]);
+            
+            appState.jobs = data.jobs.map((job, index) => ({
+                id: job.id || index + 1,
+                title: job.title || `Role`,
+                company: job.company || "Various Companies",
+                source: job.source || job.name || "Scraper",
+                matchScore: job.relevance_score || 0,
+                description: job.description || '',
+                url: job.url,
+                skillCat: job.source || job.name || "Scraped Result"
+            }));
+            
+            // Save to session storage
+            sessionStorage.setItem('raiot_jobs', JSON.stringify(appState.jobs));
+            
+            renderJobs();
+            
+            // If scraping is still in progress, poll for more jobs every 5 seconds
+            checkAndPollForMoreJobs(userId);
+        } else {
+            console.log(`⚠️ No jobs found yet, polling for updates...`);
+            showBanner('Jobs are still being scraped! This page will auto-refresh...', 'info', 'notifyBannerDash');
+            startJobPolling(userId);
+        }
+    } catch (error) {
+        console.error('❌ Error loading jobs:', error);
+        
+        // Last resort: try session storage
+        const storedJobs = sessionStorage.getItem('raiot_jobs');
+        if (storedJobs) {
+            appState.jobs = JSON.parse(storedJobs);
+            console.log(`💾 Loaded ${appState.jobs.length} jobs from session storage after error`);
+            renderJobs();
+        }
+    }
+}
+
+let jobPollingInterval = null;
+
+function startJobPolling(userId) {
+    // Clear any existing polling
+    if (jobPollingInterval) {
+        clearInterval(jobPollingInterval);
+    }
+    
+    // Poll every 3 seconds
+    jobPollingInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`/get-jobs/${userId}`);
+            const data = await response.json();
+            
+            console.log(`🔄 Polling: ${data.total} jobs found`);
+            
+            if (data.jobs && data.jobs.length > 0) {
+                appState.jobs = data.jobs.map((job, index) => ({
+                    id: job.id || index + 1,
+                    title: job.title || `Role`,
+                    company: job.company || "Various Companies",
+                    source: job.source || job.name || "Scraper",
+                    matchScore: job.relevance_score || 0,
+                    description: job.description || '',
+                    url: job.url,
+                    skillCat: job.source || job.name || "Scraped Result"
+                }));
+                
+                sessionStorage.setItem('raiot_jobs', JSON.stringify(appState.jobs));
+                renderJobs();
+                
+                // If we have 20+ jobs or scraping is complete, stop polling
+                if (data.total >= 20) {
+                    console.log(`✅ Got enough jobs (${data.total}), stopping poll`);
+                    clearInterval(jobPollingInterval);
+                    showBanner(`Found ${data.total} jobs!`, 'success', 'notifyBannerDash');
+                }
+            }
+        } catch (error) {
+            console.error('Poll error:', error);
+        }
+    }, 3000); // Poll every 3 seconds
+}
+
+function checkAndPollForMoreJobs(userId) {
+    // If we have jobs but might get more, keep polling
+    if (appState.jobs.length > 0 && appState.jobs.length < 20) {
+        startJobPolling(userId);
+    }
+}

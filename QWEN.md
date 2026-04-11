@@ -2,6 +2,9 @@
 
 > ⭐ **QUICK REFERENCE - LATEST CHANGES** ⭐
 > 
+> **Issue 16**: CRITICAL FIX - Dashboard now loads jobs from database (NEW)
+> **Issue 15**: Fixed dashboard redirect, job count display, skills graph
+> **Issue 14**: Real-time profile completion page + live job streaming
 > **Issue 13**: All 11 job sites tested & fixed with universal fallback system
 > **Issue 12**: Naukri anti-bot bypass with search links
 > **Issue 11**: Scraper timeouts fixed + Experience/Location filters added
@@ -12,57 +15,74 @@
 
 ---
 
-## 🌟 CHANGES SUMMARY - April 11, 2026
+## 🚨 CRITICAL FIX - Issue 16: Dashboard Now Loads Jobs From Database
 
-### What Was Fixed Today:
+**Critical Problem**: Users clicking "Go to Jobs" saw 0 jobs even though backend had scraped 32 jobs. SSE streaming was unreliable for initial job load.
 
-**Problem**: Job scrapers weren't working - sites were blocking automation, returning 0 jobs even when manual searches showed thousands.
+**Root Cause**: 
+- Dashboard relied on SSE or sessionStorage to get jobs
+- SSE connection could timeout before jobs were loaded
+- sessionStorage wasn't reliably populated
+- No direct database query to fetch saved jobs
 
-**Solution**: Comprehensive testing + Universal fallback system
+**Solution**: Added `/get-jobs/<user_id>` endpoint + database-first loading
 
-### Results:
-
-| Metric | Before | After |
-|--------|--------|-------|
-| Working Sites | 2 out of 11 | **11 out of 11** ✅ |
-| Sites Blocked | 9 sites | **0 sites** ✅ |
-| User Experience | "No jobs found" | **Always working links** ✅ |
-| Job Diversity | 2 sources | **11 sources** ✅ |
-
-### Key Features Added:
-
-1. ✅ **Experience Level Filter** - Entry/Mid/Senior/Lead
-2. ✅ **Location Filter** - Search jobs by city/region
-3. ✅ **Role Mapping** - Smart job titles for each site (e.g., "HTML" → "Frontend Engineer")
-4. ✅ **Universal Fallback** - When blocked, provide working search links
-5. ✅ **Timeout Prevention** - 60% faster scraping, zero crashes
-6. ✅ **New Job Sites** - Added Dice (tech) + WeWorkRemotely (remote)
-7. ✅ **Smart Ranking** - Real jobs (60-100 score) appear before fallbacks (30-45)
-
-### How It Works:
+### How It Works Now:
 
 ```
-User searches: "Python Developer, Senior Level, Bangalore"
+User clicks "Go to Jobs"
     ↓
-Scraper tries 11 sites:
-  ✅ Indeed: 5 real jobs scraped (scores: 85-65)
-  ✅ WeWorkRemotely: 1 real job (score: 70)
-  🔗 LinkedIn: Blocked → Search link (score: 45)
-  🔗 Glassdoor: Blocked → Search link (score: 45)
-  🔗 Naukri: Blocked → Search link (score: 45)
-  ... (all 11 sites provide something)
+Redirects to /#dashboard
     ↓
-User sees: 6 real jobs + 9 working search links
-Total: 15 opportunities from 11 sources ✅
+handleHashRoute() detects hash
+    ↓
+loadJobsFromDatabase(userId)
+    ↓
+Fetches jobs from database via /get-jobs/{userId}
+    ↓
+Displays all scraped jobs immediately ✅
+    ↓
+Optionally connects to SSE for real-time updates
 ```
 
-### Files Modified:
+### Changes Made:
 
-- `scraper.py` - Complete rewrite with fallback system
-- `app.py` - Added experience/location parameters
-- `templates/index.html` - Added experience/location input fields
-- `static/script.js` - Sends new parameters to backend
-- `QWEN.md` - This documentation
+**1. Added `/get-jobs/<user_id>` endpoint (app.py)**
+```python
+@app.route('/get-jobs/<int:user_id>')
+def get_jobs(user_id):
+    """Get all jobs for a user from database."""
+    jobs = JobMatch.query.filter_by(user_id=user_id)
+               .order_by(JobMatch.relevance_score.desc())
+               .all()
+    return jsonify({'jobs': jobs_data, 'total': len(jobs_data)})
+```
+
+**2. Updated dashboard loading (script.js)**
+```javascript
+async function loadJobsFromDatabase(userId) {
+    const response = await fetch(`/get-jobs/${userId}`);
+    const data = await response.json();
+    appState.jobs = data.jobs.map(...);
+    renderJobs();
+}
+```
+
+**3. Fixed SSE timeout (app.py)**
+- Reduced timeout from 30s to 5s
+- Stream continues until scraping is finished
+- Sends heartbeat to keep connection alive
+
+**4. Added console logging**
+- Logs job count when saving to sessionStorage
+- Logs job count when loading from database
+- Easy to debug in browser console
+
+### Result:
+- ✅ **Jobs load instantly** from database when navigating to dashboard
+- ✅ **No more "0 jobs" issue** - all 32 scraped jobs display correctly
+- ✅ **SSE used for real-time updates only** (not initial load)
+- ✅ **Reliable and fast** - database query is instant
 
 ---
 
