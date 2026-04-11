@@ -50,7 +50,9 @@ def upload_file():
     
     # Extract desired job type from request if user provided one (default: "Full-time")
     job_type = request.form.get('job_type', 'Full-time')
-    
+    experience_level = request.form.get('experience_level', '')
+    preferred_location = request.form.get('preferred_location', '')
+
     # Phase 1: Save User to SQLite Database
     user = User(
         name=user_profile.get('name', 'Applicant'),
@@ -61,10 +63,16 @@ def upload_file():
     )
     db.session.add(user)
     db.session.commit()
-    
+
     # 2. Build Search Links using the Scraper
-    # Passing job_type so scraper knows what to search for (Full-time, Internship, Freelance)
-    jobs = get_dynamic_job_links(user_profile['skills'], user_profile['level'], job_type)
+    # Passing job_type, experience_level, and preferred_location for better job matching
+    jobs = get_dynamic_job_links(
+        user_profile['skills'], 
+        user_profile['level'], 
+        job_type,
+        experience_level=experience_level if experience_level else user_profile['level'],
+        location=preferred_location
+    )
 
     # Save Jobs to Database linked to the user
     for job in jobs:

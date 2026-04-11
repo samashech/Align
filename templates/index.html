@@ -292,6 +292,22 @@
                             <option value="Freelance">Freelancing</option>
                         </select>
                     </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-900 mb-2">Experience Level</label>
+                            <select id="experienceLevel" class="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white">
+                                <option value="">Auto-detect from resume</option>
+                                <option value="Entry Level">Entry Level (0-2 years)</option>
+                                <option value="Mid Level">Mid Level (2-5 years)</option>
+                                <option value="Senior Level">Senior Level (5+ years)</option>
+                                <option value="Lead/Manager">Lead/Manager</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-900 mb-2">Preferred Location</label>
+                            <input id="preferredLocation" type="text" placeholder="e.g., Bangalore, Remote, USA" class="w-full px-4 py-3 rounded-lg border border-slate-200">
+                        </div>
+                    </div>
                     <div>
                         <label class="block text-sm font-semibold text-slate-900 mb-2">Professional Photo</label>
                         <input id="uploadedPhoto" type="file" accept="image/*" class="w-full px-4 py-3 rounded-lg border border-slate-200">

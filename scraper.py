@@ -79,6 +79,440 @@ def clean_skill_for_search(skill):
     return skill
 
 
+# Job role mapping for sites that need specific job titles (Glassdoor, etc.)
+GLASSDOOR_ROLE_EXPANSIONS = {
+    # OS & Infrastructure
+    "Linux": ["Linux Administrator", "Linux Engineer", "Linux System Administrator", "Linux DevOps"],
+    "Unix": ["Unix Administrator", "Unix Engineer", "Unix Systems Administrator"],
+    "Windows": ["Windows Administrator", "Windows Engineer", "Desktop Support"],
+    "Ubuntu": ["Ubuntu Administrator", "Linux Administrator", "Cloud Engineer"],
+    
+    # Programming Languages
+    "Python": ["Python Developer", "Python Engineer", "Software Engineer Python"],
+    "Java": ["Java Developer", "Java Engineer", "Software Engineer Java"],
+    "JavaScript": ["JavaScript Developer", "JavaScript Engineer", "Frontend Developer"],
+    "C++": ["C++ Developer", "C++ Engineer", "Software Engineer C++"],
+    "C#": ["C# Developer", "C# Engineer", ".NET Developer"],
+    
+    # Web Technologies
+    "Html": ["Frontend Developer", "Web Developer", "UI Developer"],
+    "Css": ["Frontend Developer", "Web Developer", "UI Developer"],
+    "React": ["React Developer", "React Engineer", "Frontend Engineer React"],
+    "Angular": ["Angular Developer", "Angular Engineer", "Frontend Engineer"],
+    "Node": ["Node Developer", "Node Engineer", "Backend Engineer"],
+    "Node.Js": ["Node.js Developer", "Node.js Engineer", "Backend Engineer"],
+    "Django": ["Django Developer", "Django Engineer", "Python Backend Developer"],
+    
+    # Cloud & DevOps
+    "Aws": ["AWS Engineer", "Cloud Engineer AWS", "AWS Architect"],
+    "Azure": ["Azure Engineer", "Cloud Engineer Azure", "Azure Architect"],
+    "Google Cloud": ["GCP Engineer", "Cloud Engineer GCP", "Google Cloud Architect"],
+    "Docker": ["DevOps Engineer", "Docker Engineer", "Container Engineer"],
+    "Kubernetes": ["DevOps Engineer", "Kubernetes Engineer", "Platform Engineer"],
+    "Devops": ["DevOps Engineer", "Site Reliability Engineer", "Infrastructure Engineer"],
+    
+    # Databases
+    "Mysql": ["Database Developer", "MySQL Developer", "Database Administrator"],
+    "Postgresql": ["Database Developer", "PostgreSQL Developer", "Database Administrator"],
+    "Mongodb": ["Database Developer", "MongoDB Developer", "NoSQL Developer"],
+    "Oracle": ["Oracle Developer", "Oracle DBA", "Database Administrator Oracle"],
+    
+    # Data & ML
+    "Machine Learning": ["Machine Learning Engineer", "ML Engineer", "AI Engineer"],
+    "Deep Learning": ["Deep Learning Engineer", "AI Researcher", "ML Engineer"],
+    "Tensorflow": ["ML Engineer", "AI Engineer", "Deep Learning Engineer"],
+    "Pytorch": ["ML Engineer", "AI Engineer", "Research Engineer"],
+    "Python": ["Data Scientist", "Data Analyst", "ML Engineer"],
+    
+    # Design
+    "Adobe Photoshop": ["Graphic Designer", "Visual Designer", "UI Designer"],
+    "Adobe Illustrator": ["Graphic Designer", "Visual Designer", "Brand Designer"],
+    "Figma": ["UI Designer", "UX Designer", "Product Designer"],
+    "Canva": ["Social Media Manager", "Content Creator", "Marketing Designer"],
+    "Graphic Design": ["Graphic Designer", "Visual Designer", "Creative Designer"],
+    
+    # Mobile
+    "React Native": ["React Native Developer", "Mobile Engineer", "Cross-Platform Developer"],
+    "Flutter": ["Flutter Developer", "Mobile Engineer", "Dart Developer"],
+    "Android Development": ["Android Developer", "Android Engineer", "Mobile Developer"],
+    "Ios Development": ["iOS Developer", "iOS Engineer", "Mobile Developer"],
+    
+    # General
+    "Sql": ["Database Developer", "SQL Developer", "Data Analyst"],
+    "Git": ["Software Engineer", "Developer", "DevOps Engineer"],
+    "Rest": ["Backend Developer", "API Developer", "Integration Engineer"],
+    "Api Development": ["Backend Developer", "API Developer", "Integration Engineer"],
+}
+
+# Wellfound (AngelList) role mapping - startup-focused job titles
+WELLFOUND_ROLE_MAP = {
+    # Frontend Engineering
+    "Html": "Frontend Engineer",
+    "Css": "Frontend Engineer",
+    "JavaScript": "Frontend Engineer",
+    "React": "Frontend Engineer",
+    "Angular": "Frontend Engineer",
+    "Vue": "Frontend Engineer",
+    "Bootstrap": "Frontend Engineer",
+    "Tailwind": "Frontend Engineer",
+    "Jquery": "Frontend Engineer",
+    
+    # Backend Engineering
+    "Python": "Backend Engineer",
+    "Django": "Backend Engineer",
+    "Flask": "Backend Engineer",
+    "Fastapi": "Backend Engineer",
+    "Java": "Backend Engineer",
+    "Node": "Backend Engineer",
+    "Node.Js": "Backend Engineer",
+    "Go": "Backend Engineer",
+    "Golang": "Backend Engineer",
+    "Ruby": "Backend Engineer",
+    "Php": "Backend Engineer",
+    "Spring Boot": "Backend Engineer",
+    "Rails": "Backend Engineer",
+    "Laravel": "Backend Engineer",
+    
+    # Full Stack (overrides for skills that indicate full-stack)
+    "React Native": "Full Stack Engineer",
+    
+    # Data & ML Engineering
+    "Machine Learning": "Machine Learning Engineer",
+    "Deep Learning": "Machine Learning Engineer",
+    "Tensorflow": "Machine Learning Engineer",
+    "Pytorch": "Machine Learning Engineer",
+    "Pandas": "Data Engineer",
+    "Numpy": "Data Engineer",
+    "Scikit-Learn": "Machine Learning Engineer",
+    "R": "Data Scientist",
+    "Matlab": "Data Scientist",
+    
+    # DevOps & Cloud
+    "Aws": "DevOps Engineer",
+    "Azure": "DevOps Engineer",
+    "Google Cloud": "DevOps Engineer",
+    "Docker": "DevOps Engineer",
+    "Kubernetes": "DevOps Engineer",
+    "Linux": "DevOps Engineer",
+    "Terraform": "DevOps Engineer",
+    "Ansible": "DevOps Engineer",
+    
+    # Mobile Engineering
+    "Flutter": "Mobile Engineer",
+    "Android Development": "Mobile Engineer",
+    "Ios Development": "Mobile Engineer",
+    "Swift": "Mobile Engineer",
+    "Kotlin": "Mobile Engineer",
+    
+    # Database
+    "Mysql": "Database Engineer",
+    "Postgresql": "Database Engineer",
+    "Mongodb": "Database Engineer",
+    "Redis": "Database Engineer",
+    "Oracle": "Database Engineer",
+    "Sql": "Database Engineer",
+    
+    # Design
+    "Figma": "Product Designer",
+    "Adobe Photoshop": "Product Designer",
+    "Adobe Illustrator": "Product Designer",
+    "Sketch": "Product Designer",
+    "Canva": "Product Designer",
+    "Adobe Indesign": "Product Designer",
+    "Graphic Design": "Product Designer",
+    
+    # Product & Management
+    "Agile": "Product Manager",
+    "Scrum": "Product Manager",
+    "Jira": "Product Manager",
+    "Project Management": "Product Manager",
+    
+    # Security
+    "Cybersecurity": "Security Engineer",
+    "Penetration Testing": "Security Engineer",
+    "Network Security": "Security Engineer",
+}
+
+# Monster (foundit.in) role mapping - traditional corporate job titles
+MONSTER_ROLE_MAP = {
+    # IT/Software
+    "Html": "Software Developer",
+    "Css": "Software Developer",
+    "JavaScript": "Software Developer",
+    "Python": "Software Developer",
+    "Java": "Software Developer",
+    "C++": "Software Developer",
+    "C#": "Software Developer",
+    "React": "Software Developer",
+    "Angular": "Software Developer",
+    "Node": "Software Developer",
+    "Node.Js": "Software Developer",
+    "Php": "Software Developer",
+    "Django": "Software Developer",
+    "Flask": "Software Developer",
+    
+    # System Admin
+    "Linux": "System Administrator",
+    "Unix": "System Administrator",
+    "Windows": "System Administrator",
+    "Ubuntu": "System Administrator",
+    "Aws": "Cloud Engineer",
+    "Azure": "Cloud Engineer",
+    "Google Cloud": "Cloud Engineer",
+    "Docker": "DevOps Engineer",
+    "Kubernetes": "DevOps Engineer",
+    
+    # Database
+    "Mysql": "Database Administrator",
+    "Postgresql": "Database Administrator",
+    "Mongodb": "Database Administrator",
+    "Oracle": "Database Administrator",
+    "Sql": "Database Administrator",
+    
+    # Data/ML
+    "Machine Learning": "Data Scientist",
+    "Deep Learning": "Data Scientist",
+    "Tensorflow": "Data Scientist",
+    "Pytorch": "Data Scientist",
+    "R": "Data Analyst",
+    "Pandas": "Data Analyst",
+    
+    # Design
+    "Adobe Photoshop": "Graphic Designer",
+    "Adobe Illustrator": "Graphic Designer",
+    "Figma": "UI/UX Designer",
+    "Canva": "Graphic Designer",
+    "Graphic Design": "Graphic Designer",
+    
+    # Networking
+    "Networking": "Network Engineer",
+    "Ccn": "Network Engineer",
+    "Cisco": "Network Engineer",
+    
+    # Testing
+    "Selenium": "Test Engineer",
+    "Jest": "Test Engineer",
+    "Pytest": "Test Engineer",
+    
+    # Project Management
+    "Agile": "Project Manager",
+    "Scrum": "Project Manager",
+    "Jira": "Project Manager",
+    "Project Management": "Project Manager",
+    
+    # Mobile
+    "React Native": "Mobile Developer",
+    "Flutter": "Mobile Developer",
+    "Android Development": "Mobile Developer",
+    "Ios Development": "Mobile Developer",
+}
+
+
+def get_glassdoor_search_queries(skill):
+    """
+    For Glassdoor: Generate expanded search queries with proper job titles.
+    Returns a list of queries to try for a given skill.
+    """
+    cleaned_skill = clean_skill_for_search(skill)
+    skill_title = cleaned_skill.title()
+    
+    # If we have specific role mappings, use them
+    if skill_title in GLASSDOOR_ROLE_EXPANSIONS:
+        return GLASSDOOR_ROLE_EXPANSIONS[skill_title]
+    
+    # Default: just use the cleaned skill name
+    return [cleaned_skill]
+
+
+def get_wellfound_search_role(skill):
+    """
+    For Wellfound: Map technical skills to proper startup job roles.
+    Returns a job role string for searching.
+    """
+    cleaned_skill = clean_skill_for_search(skill)
+    skill_title = cleaned_skill.title()
+    
+    # Check if we have a mapping for this skill
+    if skill_title in WELLFOUND_ROLE_MAP:
+        return WELLFOUND_ROLE_MAP[skill_title]
+    
+    # Default: use the skill name as-is
+    return cleaned_skill
+
+
+def get_linkedin_search_role(skill):
+    """
+    For LinkedIn: Map skills to professional job titles.
+    Returns a job role string for searching.
+    """
+    cleaned_skill = clean_skill_for_search(skill)
+    skill_title = cleaned_skill.title()
+    
+    # Use Glassdoor mappings (same professional titles)
+    if skill_title in GLASSDOOR_ROLE_EXPANSIONS:
+        return GLASSDOOR_ROLE_EXPANSIONS[skill_title][0]  # Use first/best match
+    
+    # Use Wellfound mappings as fallback
+    if skill_title in WELLFOUND_ROLE_MAP:
+        return WELLFOUND_ROLE_MAP[skill_title]
+    
+    # Default: use the skill name as-is
+    return cleaned_skill
+
+
+def get_indeed_search_role(skill):
+    """
+    For Indeed: Map skills to common job titles.
+    Returns a job role string for searching.
+    """
+    cleaned_skill = clean_skill_for_search(skill)
+    skill_title = cleaned_skill.title()
+    
+    # Use Monster mappings (corporate titles work well on Indeed)
+    if skill_title in MONSTER_ROLE_MAP:
+        return MONSTER_ROLE_MAP[skill_title]
+    
+    # Use Glassdoor mappings as fallback
+    if skill_title in GLASSDOOR_ROLE_EXPANSIONS:
+        return GLASSDOOR_ROLE_EXPANSIONS[skill_title][0]
+    
+    # Default: use the skill name as-is
+    return cleaned_skill
+
+
+def get_naukri_search_role(skill):
+    """
+    For Naukri: Map skills to Indian corporate job titles.
+    Returns a job role string for searching.
+    """
+    cleaned_skill = clean_skill_for_search(skill)
+    skill_title = cleaned_skill.title()
+    
+    # Naukri uses similar corporate titles to Monster
+    if skill_title in MONSTER_ROLE_MAP:
+        return MONSTER_ROLE_MAP[skill_title]
+    
+    # Use Glassdoor mappings as fallback
+    if skill_title in GLASSDOOR_ROLE_EXPANSIONS:
+        return GLASSDOOR_ROLE_EXPANSIONS[skill_title][0]
+    
+    # Default: use the skill name as-is
+    return cleaned_skill
+
+
+def get_timesjobs_search_role(skill):
+    """
+    For TimesJobs: Map skills to job titles.
+    Returns a job role string for searching.
+    """
+    cleaned_skill = clean_skill_for_search(skill)
+    skill_title = cleaned_skill.title()
+    
+    # TimesJobs uses similar titles to Monster/Naukri
+    if skill_title in MONSTER_ROLE_MAP:
+        return MONSTER_ROLE_MAP[skill_title]
+    
+    # Use Glassdoor mappings as fallback
+    if skill_title in GLASSDOOR_ROLE_EXPANSIONS:
+        return GLASSDOOR_ROLE_EXPANSIONS[skill_title][0]
+    
+    # Default: use the skill name as-is
+    return cleaned_skill
+
+
+def get_internshala_search_role(skill, job_type="Full-time"):
+    """
+    For Internshala: Map skills to internship roles.
+    Returns a job role string for searching.
+    """
+    cleaned_skill = clean_skill_for_search(skill)
+    skill_title = cleaned_skill.title()
+    
+    # Internship-specific mappings (add "Intern" suffix for some roles)
+    internship_mappings = {
+        "Html": "Web Development",
+        "Css": "Web Development",
+        "JavaScript": "Web Development",
+        "React": "Web Development",
+        "Python": "Software Development",
+        "Java": "Software Development",
+        "Machine Learning": "Data Science",
+        "Deep Learning": "Data Science",
+        "Aws": "Cloud Computing",
+        "Docker": "DevOps",
+        "Linux": "System Administration",
+        "Adobe Photoshop": "Graphic Design",
+        "Figma": "UI/UX Design",
+        "Content Writing": "Content Writing",
+        "Marketing": "Marketing",
+    }
+    
+    if skill_title in internship_mappings:
+        return internship_mappings[skill_title]
+    
+    # Use Wellfound mappings as fallback
+    if skill_title in WELLFOUND_ROLE_MAP:
+        return WELLFOUND_ROLE_MAP[skill_title]
+    
+    # Default: use the skill name as-is
+    return cleaned_skill
+
+
+def get_upwork_search_role(skill):
+    """
+    For Upwork: Map skills to freelance job titles.
+    Returns a job role string for searching.
+    """
+    cleaned_skill = clean_skill_for_search(skill)
+    skill_title = cleaned_skill.title()
+    
+    # Freelance-specific mappings (use "Developer" instead of "Engineer")
+    freelance_mappings = {
+        "Html": "Web Developer",
+        "Css": "Web Developer",
+        "JavaScript": "Web Developer",
+        "React": "React Developer",
+        "Python": "Python Developer",
+        "Java": "Java Developer",
+        "Php": "PHP Developer",
+        "Wordpress": "WordPress Developer",
+        "Shopify": "Shopify Developer",
+        "Machine Learning": "ML Engineer",
+        "Aws": "Cloud Architect",
+        "Docker": "DevOps Engineer",
+        "Adobe Photoshop": "Graphic Designer",
+        "Figma": "UI/UX Designer",
+        "Content Writing": "Content Writer",
+        "Video Editing": "Video Editor",
+    }
+    
+    if skill_title in freelance_mappings:
+        return freelance_mappings[skill_title]
+    
+    # Use Glassdoor mappings as fallback
+    if skill_title in GLASSDOOR_ROLE_EXPANSIONS:
+        return GLASSDOOR_ROLE_EXPANSIONS[skill_title][0]
+    
+    # Default: use the skill name as-is
+    return cleaned_skill
+
+
+def get_monster_search_role(skill):
+    """
+    For Monster (foundit.in): Map skills to traditional corporate job titles.
+    Returns a job role string for searching.
+    """
+    cleaned_skill = clean_skill_for_search(skill)
+    skill_title = cleaned_skill.title()
+    
+    # Check if we have a mapping for this skill
+    if skill_title in MONSTER_ROLE_MAP:
+        return MONSTER_ROLE_MAP[skill_title]
+    
+    # Default: use the skill name as-is
+    return cleaned_skill
+
+
 def calculate_relevance_score(job_title, job_description, skills):
     """
     Calculates a relevance score (0-100) based on how many user skills
@@ -131,15 +565,65 @@ def calculate_relevance_score(job_title, job_description, skills):
     return score
 
 
-def scrape_linkedin(page, query, skills):
+def _is_blocked(content):
+    """Check if the page content indicates blocking/CAPTCHA."""
+    if not content:
+        return True
+    content_lower = content.lower()
+    block_indicators = [
+        "access denied",
+        "captcha",
+        "verify you are human",
+        "forbidden",
+        "403",
+        "challenge-platform",
+        "suspicious traffic",
+        "security check"
+    ]
+    return any(indicator in content_lower for indicator in block_indicators)
+
+
+def _create_fallback_job(site_name, job_role, search_url, relevance_score=40, description=""):
+    """Create a fallback search link job when scraping fails."""
+    return {
+        "name": site_name,
+        "title": f"{job_role} Jobs on {site_name}",
+        "company": "Click to Browse All Jobs",
+        "url": search_url,
+        "description": description or f"{site_name} has anti-bot protection. Click to browse {job_role} opportunities directly on {site_name}",
+        "source": f"{site_name} (Search Link)",
+        "relevance_score": relevance_score
+    }
+
+
+def scrape_linkedin(page, query, skills, experience_level="", location=""):
     """Scrape actual job listings from LinkedIn."""
     results = []
     try:
-        encoded_query = urllib.parse.quote(query)
+        # Map skill to professional job title
+        job_role = get_linkedin_search_role(query)
+        
+        # Build search query with experience and location
+        search_parts = [job_role]
+        if location:
+            search_parts.append(location)
+        if experience_level and 'intern' not in experience_level.lower():
+            if 'senior' in experience_level.lower() or 'lead' in experience_level.lower():
+                search_parts.append('Senior')
+            elif 'entry' in experience_level.lower():
+                search_parts.append('Entry Level')
+        
+        search_query = ' '.join(search_parts)
+        encoded_query = urllib.parse.quote(search_query)
         url = f"https://www.linkedin.com/jobs/search/?keywords={encoded_query}"
-        print(f"    [LinkedIn] Navigating to: {url}")
-        page.goto(url, wait_until="networkidle", timeout=20000)
-        page.wait_for_timeout(3000)  # Wait for JS to render
+        print(f"    [LinkedIn] Mapped '{query}' -> '{search_query}', navigating to: {url}")
+        page.goto(url, wait_until="domcontentloaded", timeout=25000)
+        page.wait_for_timeout(2000)  # Wait for JS to render
+
+        # Check if blocked
+        if _is_blocked(page.content()):
+            print(f"    [LinkedIn] Blocked by CAPTCHA, returning search link")
+            return [_create_fallback_job("LinkedIn", job_role, url, 45)]
 
         soup = BeautifulSoup(page.content(), "html.parser")
         
@@ -202,21 +686,37 @@ def scrape_linkedin(page, query, skills):
                 continue
                 
         print(f"    [LinkedIn] Extracted {len(results)} relevant jobs")
+        
+        # If no jobs scraped, return fallback
+        if not results:
+            print(f"    [LinkedIn] No jobs scraped, returning search link")
+            results.append(_create_fallback_job("LinkedIn", job_role, url, 35))
     except Exception as e:
         print(f"    [LinkedIn] Scraping failed: {e}")
+        job_role = get_linkedin_search_role(query)
+        url = f"https://www.linkedin.com/jobs/search/?keywords={urllib.parse.quote(job_role)}"
+        results.append(_create_fallback_job("LinkedIn", job_role, url, 30, f"LinkedIn scraping failed. Click to search for {job_role} jobs."))
 
     return results
 
 
-def scrape_indeed(page, query, skills):
+def scrape_indeed(page, query, skills, experience_level="", location=""):
     """Scrape actual job listings from Indeed."""
     results = []
     try:
-        encoded_query = urllib.parse.quote(query)
+        # Map skill to common job title
+        job_role = get_indeed_search_role(query)
+        
+        # Build query with location
+        search_query = job_role
+        if location:
+            search_query += f" {location}"
+        
+        encoded_query = urllib.parse.quote(search_query)
         url = f"https://in.indeed.com/jobs?q={encoded_query}"
-        print(f"    [Indeed] Navigating to: {url}")
-        page.goto(url, wait_until="networkidle", timeout=20000)
-        page.wait_for_timeout(2000)
+        print(f"    [Indeed] Mapped '{query}' -> '{search_query}', navigating to: {url}")
+        page.goto(url, wait_until="domcontentloaded", timeout=25000)
+        page.wait_for_timeout(1500)
 
         soup = BeautifulSoup(page.content(), "html.parser")
         
@@ -274,36 +774,64 @@ def scrape_indeed(page, query, skills):
     return results
 
 
-def scrape_naukri(page, query, skills):
-    """Scrape actual job listings from Naukri."""
+def scrape_naukri(page, query, skills, experience_level="", location=""):
+    """
+    Scrape actual job listings from Naukri.
+    NOTE: Naukri has strong anti-bot protection, so we use a hybrid approach:
+    1. Try to scrape with advanced stealth
+    2. If blocked, return direct search links that work
+    """
     results = []
     try:
-        dash_query = query.replace(' ', '-')
-        url = f"https://www.naukri.com/{dash_query}-jobs"
-        print(f"    [Naukri] Navigating to: {url}")
-        page.goto(url, wait_until="networkidle", timeout=20000)
-        page.wait_for_timeout(2000)
-
+        # Map skill to Indian corporate job title
+        job_role = get_naukri_search_role(query)
+        dash_query = job_role.replace(' ', '-')
+        
+        # Try the new Naukri URL format that's less likely to be blocked
+        url = f"https://www.naukri.com/naukri/search/results?keyword={urllib.parse.quote(job_role)}"
+        print(f"    [Naukri] Mapped '{query}' -> '{job_role}', navigating to: {url}")
+        
+        # Try to access with longer wait
+        page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        page.wait_for_timeout(4000)  # Longer wait for JS
+        
+        # Check if we got blocked
+        if "Access Denied" in page.content() or "nucaptcha" in page.content().lower():
+            print(f"    [Naukri] Blocked by anti-bot, returning search link")
+            # Return a direct search link instead
+            search_url = f"https://www.naukri.com/{dash_query}-jobs"
+            results.append({
+                "name": "Naukri",
+                "title": f"{job_role} - Search on Naukri",
+                "company": "Click to view all jobs",
+                "url": search_url,
+                "description": f"Naukri has strong anti-bot protection. Click to view {job_role} jobs directly on Naukri.com",
+                "source": "Naukri (Direct Link)",
+                "relevance_score": 50  # Medium score since it's a link, not scraped job
+            })
+            return results
+        
         soup = BeautifulSoup(page.content(), "html.parser")
         
-        # Naukri uses dynamic class names
-        job_cards = soup.find_all('article', class_=re.compile(r'jobTuple'))
+        # Naukri uses dynamic class names - try multiple selectors
+        job_cards = soup.find_all('article', class_=re.compile(r'jobTuple|tuple'))
         
         if not job_cards:
-            job_cards = soup.find_all('div', class_=re.compile(r'jobTuple'))
+            job_cards = soup.find_all('div', class_=re.compile(r'jobTuple|tuple'))
         
         if not job_cards:
-            job_cards = soup.find_all('a', href=re.compile(r'/job-'))
-            print(f"    [Naukri] Found {len(job_cards)} jobs with fallback")
+            # Try finding any job-related links
+            job_cards = soup.find_all('a', href=re.compile(r'/job/|/jobs/'))
+            print(f"    [Naukri] Found {len(job_cards)} jobs with fallback selector")
         else:
             print(f"    [Naukri] Found {len(job_cards)} jobs")
 
         for card in job_cards[:8]:
             try:
-                title_elem = card.find('a', class_=re.compile(r'title'))
+                title_elem = card.find('a', class_=re.compile(r'title|job'))
                 if not title_elem:
-                    title_elem = card.find('a', href=re.compile(r'/job-'))
-                
+                    title_elem = card.find('a', href=re.compile(r'/job/|/jobs/'))
+
                 if not title_elem:
                     continue
 
@@ -312,10 +840,10 @@ def scrape_naukri(page, query, skills):
                 if not link.startswith('http'):
                     link = f"https://www.naukri.com{link}" if link else ""
 
-                company_elem = card.find('a', class_=re.compile(r'compName'))
+                company_elem = card.find('a', class_=re.compile(r'compName|company'))
                 company = company_elem.text.strip() if company_elem else "Naukri Employer"
 
-                desc_elem = card.find('p', class_=re.compile(r'desc'))
+                desc_elem = card.find('p', class_=re.compile(r'desc|description'))
                 description = desc_elem.text.strip()[:300] if desc_elem else f"Job matching: {query}"
 
                 relevance = calculate_relevance_score(title, description, skills)
@@ -331,23 +859,57 @@ def scrape_naukri(page, query, skills):
                     })
             except Exception as e:
                 continue
-                
+        
+        # If no jobs scraped, return direct search link
+        if not results:
+            print(f"    [Naukri] No jobs scraped, returning search link")
+            search_url = f"https://www.naukri.com/{dash_query}-jobs"
+            results.append({
+                "name": "Naukri",
+                "title": f"{job_role} Jobs on Naukri",
+                "company": "View All Jobs",
+                "url": search_url,
+                "description": f"Click to browse {job_role} opportunities directly on Naukri.com",
+                "source": "Naukri (Search Link)",
+                "relevance_score": 40
+            })
+
         print(f"    [Naukri] Extracted {len(results)} relevant jobs")
     except Exception as e:
         print(f"    [Naukri] Scraping failed: {e}")
+        # On error, return direct search link
+        job_role = get_naukri_search_role(query)
+        dash_query = job_role.replace(' ', '-')
+        search_url = f"https://www.naukri.com/{dash_query}-jobs"
+        results.append({
+            "name": "Naukri",
+            "title": f"{job_role} - Browse on Naukri",
+            "company": "Click to Search",
+            "url": search_url,
+            "description": f"Naukri scraping failed. Click to search for {job_role} jobs directly on Naukri.com",
+            "source": "Naukri (Fallback)",
+            "relevance_score": 30
+        })
 
     return results
 
 
-def scrape_timesjobs(page, query, skills):
+def scrape_timesjobs(page, query, skills, experience_level="", location=""):
     """Scrape actual job listings from TimesJobs."""
     results = []
     try:
-        timesjobs_query = urllib.parse.quote(query)
+        # Map skill to job title
+        job_role = get_timesjobs_search_role(query)
+        timesjobs_query = urllib.parse.quote(job_role)
         timesjobs_url = f"https://www.timesjobs.com/candidate/job-search.html?searchType=personalizedSearch&from=submit&txtKeywords={timesjobs_query}&txtLocation="
-        print(f"    [TimesJobs] Navigating to: {timesjobs_url}")
-        page.goto(timesjobs_url, wait_until="networkidle", timeout=20000)
-        page.wait_for_timeout(2000)
+        print(f"    [TimesJobs] Mapped '{query}' -> '{job_role}', navigating to: {timesjobs_url}")
+        page.goto(timesjobs_url, wait_until="domcontentloaded", timeout=25000)
+        page.wait_for_timeout(1500)
+        
+        # Check if blocked
+        if _is_blocked(page.content()):
+            print(f"    [TimesJobs] Blocked, returning search link")
+            return [_create_fallback_job("TimesJobs", job_role, timesjobs_url, 45)]
 
         soup = BeautifulSoup(page.content(), "html.parser")
         cards = soup.find_all("li", class_="clearfix job-bx wht-shd-bx")
@@ -393,22 +955,38 @@ def scrape_timesjobs(page, query, skills):
                 continue
                 
         print(f"    [TimesJobs] Extracted {len(results)} relevant jobs")
+        
+        # If no jobs scraped, return fallback
+        if not results:
+            job_role = get_timesjobs_search_role(query)
+            url = f"https://www.timesjobs.com/candidate/job-search.html?searchType=personalizedSearch&from=submit&txtKeywords={urllib.parse.quote(job_role)}&txtLocation="
+            results.append(_create_fallback_job("TimesJobs", job_role, url, 35))
     except Exception as e:
         print(f"    [TimesJobs] Scraping failed: {e}")
+        job_role = get_timesjobs_search_role(query)
+        url = f"https://www.timesjobs.com/candidate/job-search.html?searchType=personalizedSearch&from=submit&txtKeywords={urllib.parse.quote(job_role)}&txtLocation="
+        results.append(_create_fallback_job("TimesJobs", job_role, url, 30, f"TimesJobs scraping failed. Click to search for {job_role} jobs."))
 
     return results
 
 
-def scrape_internshala(page, query, skills, job_type="Full-time"):
+def scrape_internshala(page, query, skills, job_type="Full-time", experience_level=""):
     """Scrape actual job listings from Internshala."""
     results = []
     try:
-        internshala_query = "-".join([s.lower().replace(" ", "-") for s in query.split()[:2]])
+        # Map skill to internship role
+        intern_role = get_internshala_search_role(query, job_type)
+        internshala_query = "-".join([s.lower().replace(" ", "-") for s in intern_role.split()[:2]])
         base_path = "internships" if job_type == "Internship" else "jobs"
         scrape_url = f"https://internshala.com/{base_path}/keywords-{internshala_query}/"
-        print(f"    [Internshala] Navigating to: {scrape_url}")
-        page.goto(scrape_url, wait_until="networkidle", timeout=20000)
-        page.wait_for_timeout(2000)
+        print(f"    [Internshala] Mapped '{query}' -> '{intern_role}', navigating to: {scrape_url}")
+        page.goto(scrape_url, wait_until="domcontentloaded", timeout=25000)
+        page.wait_for_timeout(1500)
+        
+        # Check if blocked
+        if _is_blocked(page.content()):
+            print(f"    [Internshala] Blocked by CAPTCHA, returning search link")
+            return [_create_fallback_job("Internshala", intern_role, scrape_url, 45)]
 
         soup = BeautifulSoup(page.content(), "html.parser")
         cards = soup.find_all("div", class_="internship_meta")
@@ -444,85 +1022,153 @@ def scrape_internshala(page, query, skills, job_type="Full-time"):
                 continue
                 
         print(f"    [Internshala] Extracted {len(results)} relevant jobs")
+        
+        # If no jobs scraped, return fallback
+        if not results:
+            intern_role = get_internshala_search_role(query, job_type)
+            internshala_query = "-".join([s.lower().replace(" ", "-") for s in intern_role.split()[:2]])
+            base_path = "internships" if job_type == "Internship" else "jobs"
+            url = f"https://internshala.com/{base_path}/keywords-{internshala_query}/"
+            results.append(_create_fallback_job("Internshala", intern_role, url, 35))
     except Exception as e:
         print(f"    [Internshala] Scraping failed: {e}")
+        intern_role = get_internshala_search_role(query, job_type)
+        internshala_query = "-".join([s.lower().replace(" ", "-") for s in intern_role.split()[:2]])
+        base_path = "internships" if job_type == "Internship" else "jobs"
+        url = f"https://internshala.com/{base_path}/keywords-{internshala_query}/"
+        results.append(_create_fallback_job("Internshala", intern_role, url, 30, f"Internshala scraping failed. Click to search for {intern_role} internships/jobs."))
 
     return results
 
 
-def scrape_glassdoor(page, query, skills):
-    """Scrape actual job listings from Glassdoor."""
+def scrape_glassdoor(page, query, skills, experience_level="", location=""):
+    """
+    Scrape actual job listings from Glassdoor.
+    Tries multiple expanded job role queries if initial search returns no results.
+    Uses experience level and location for better targeting.
+    """
     results = []
     try:
-        encoded_query = urllib.parse.quote(query)
-        url = f"https://www.glassdoor.com/Job/jobs.htm?sc.keyword={encoded_query}"
-        print(f"    [Glassdoor] Navigating to: {url}")
-        page.goto(url, wait_until="networkidle", timeout=20000)
-        page.wait_for_timeout(3000)
-
-        soup = BeautifulSoup(page.content(), "html.parser")
-        job_cards = soup.find_all('div', class_=re.compile(r'jobListing'))
+        # Get expanded queries for this skill
+        search_queries = get_glassdoor_search_queries(query)
+        print(f"    [Glassdoor] Trying {len(search_queries)} queries for '{query}': {search_queries[:2]}...")
         
-        if not job_cards:
-            job_cards = soup.find_all('li', class_=re.compile(r'JobsList'))
-            print(f"    [Glassdoor] Found {len(job_cards)} jobs with fallback")
-        else:
-            print(f"    [Glassdoor] Found {len(job_cards)} jobs")
-
-        for card in job_cards[:8]:
-            try:
-                title_elem = card.find('a', class_=re.compile(r'jobLink'))
-                if not title_elem:
-                    title_elem = card.find('h2').find('a') if card.find('h2') else None
+        for search_query in search_queries:
+            if results:  # If we already have jobs, stop
+                break
+            
+            # Add location if provided
+            full_query = search_query
+            if location:
+                full_query += f" {location}"
                 
-                if not title_elem:
+            encoded_query = urllib.parse.quote(full_query)
+            url = f"https://www.glassdoor.com/Job/jobs.htm?sc.keyword={encoded_query}"
+            print(f"    [Glassdoor] Searching: '{full_query}'")
+            page.goto(url, wait_until="domcontentloaded", timeout=25000)
+            page.wait_for_timeout(2000)
+            
+            # Check if blocked
+            if _is_blocked(page.content()):
+                print(f"    [Glassdoor] Blocked by CAPTCHA, returning search link")
+                return [_create_fallback_job("Glassdoor", search_query, url, 45)]
+
+            soup = BeautifulSoup(page.content(), "html.parser")
+            job_cards = soup.find_all('div', class_=re.compile(r'jobListing'))
+
+            if not job_cards:
+                job_cards = soup.find_all('li', class_=re.compile(r'JobsList'))
+            
+            if not job_cards:
+                # Fallback: try finding job links directly
+                job_cards = soup.find_all('a', href=re.compile(r'/job/'))
+            
+            print(f"    [Glassdoor] Found {len(job_cards)} jobs for '{search_query}'")
+
+            for card in job_cards[:8]:
+                try:
+                    title_elem = card.find('a', class_=re.compile(r'jobLink'))
+                    if not title_elem:
+                        title_elem = card.find('h2').find('a') if card.find('h2') else None
+                    
+                    if not title_elem:
+                        continue
+
+                    title = title_elem.text.strip()
+                    link = title_elem.get('href', '')
+                    if not link.startswith('http'):
+                        link = f"https://www.glassdoor.com{link}" if link else ""
+
+                    company_elem = card.find('a', class_=re.compile(r'company'))
+                    company = company_elem.text.strip() if company_elem else "Glassdoor Employer"
+
+                    desc_elem = card.find('div', class_=re.compile(r'jobDescription'))
+                    description = desc_elem.text.strip()[:300] if desc_elem else f"Job matching: {query}"
+
+                    relevance = calculate_relevance_score(title, description, skills)
+                    if relevance > 0:
+                        results.append({
+                            "name": "Glassdoor",
+                            "title": title,
+                            "company": company,
+                            "url": link,
+                            "description": description,
+                            "source": "Glassdoor",
+                            "relevance_score": relevance
+                        })
+                except Exception as e:
                     continue
+            
+            if not results:
+                print(f"    [Glassdoor] No jobs for '{search_query}', trying next query...")
+                page.wait_for_timeout(1000)  # Small delay before next query
 
-                title = title_elem.text.strip()
-                link = title_elem.get('href', '')
-                if not link.startswith('http'):
-                    link = f"https://www.glassdoor.com{link}" if link else ""
-
-                company_elem = card.find('a', class_=re.compile(r'company'))
-                company = company_elem.text.strip() if company_elem else "Glassdoor Employer"
-
-                desc_elem = card.find('div', class_=re.compile(r'jobDescription'))
-                description = desc_elem.text.strip()[:300] if desc_elem else f"Job matching: {query}"
-
-                relevance = calculate_relevance_score(title, description, skills)
-                if relevance > 0:
-                    results.append({
-                        "name": "Glassdoor",
-                        "title": title,
-                        "company": company,
-                        "url": link,
-                        "description": description,
-                        "source": "Glassdoor",
-                        "relevance_score": relevance
-                    })
-            except Exception as e:
-                continue
-                
-        print(f"    [Glassdoor] Extracted {len(results)} relevant jobs")
+        print(f"    [Glassdoor] Extracted {len(results)} relevant jobs for '{query}'")
+        
+        # If no jobs scraped, return fallback
+        if not results:
+            job_role = get_glassdoor_search_queries(query)[0]
+            url = f"https://www.glassdoor.com/Job/jobs.htm?sc.keyword={urllib.parse.quote(job_role)}"
+            results.append(_create_fallback_job("Glassdoor", job_role, url, 35))
     except Exception as e:
         print(f"    [Glassdoor] Scraping failed: {e}")
+        job_role = get_glassdoor_search_queries(query)[0]
+        url = f"https://www.glassdoor.com/Job/jobs.htm?sc.keyword={urllib.parse.quote(job_role)}"
+        results.append(_create_fallback_job("Glassdoor", job_role, url, 30, f"Glassdoor scraping failed. Click to search for {job_role} jobs."))
 
     return results
 
 
-def scrape_monster(page, query, skills):
-    """Scrape actual job listings from Monster (foundit.in)."""
+def scrape_monster(page, query, skills, experience_level="", location=""):
+    """
+    Scrape actual job listings from Monster (foundit.in).
+    Maps skills to traditional corporate job titles for better results.
+    Uses location for better targeting.
+    """
     results = []
     try:
-        encoded_query = urllib.parse.quote(query)
+        # Map skill to traditional corporate job role
+        job_role = get_monster_search_role(query)
+        
+        # Add location to query
+        search_query = job_role
+        if location:
+            search_query += f" {location}"
+        
+        encoded_query = urllib.parse.quote(search_query)
         url = f"https://www.foundit.in/srp/results?query={encoded_query}"
-        print(f"    [Monster] Navigating to: {url}")
-        page.goto(url, wait_until="networkidle", timeout=20000)
-        page.wait_for_timeout(2000)
+        print(f"    [Monster] Mapped '{query}' -> '{search_query}', navigating to: {url}")
+        page.goto(url, wait_until="domcontentloaded", timeout=25000)
+        page.wait_for_timeout(1500)
+        
+        # Check if blocked
+        if _is_blocked(page.content()):
+            print(f"    [Monster] Blocked by anti-bot, returning search link")
+            return [_create_fallback_job("Monster", job_role, url, 45)]
 
         soup = BeautifulSoup(page.content(), "html.parser")
         job_cards = soup.find_all('div', class_=re.compile(r'SearchJob'))
-        
+
         if not job_cards:
             job_cards = soup.find_all('div', class_=re.compile(r'job-card'))
             print(f"    [Monster] Found {len(job_cards)} jobs with fallback")
@@ -561,27 +1207,47 @@ def scrape_monster(page, query, skills):
                     })
             except Exception as e:
                 continue
-                
+
         print(f"    [Monster] Extracted {len(results)} relevant jobs")
+        
+        # If no jobs scraped, return fallback
+        if not results:
+            job_role = get_monster_search_role(query)
+            url = f"https://www.foundit.in/srp/results?query={urllib.parse.quote(job_role)}"
+            results.append(_create_fallback_job("Monster", job_role, url, 35))
     except Exception as e:
         print(f"    [Monster] Scraping failed: {e}")
+        job_role = get_monster_search_role(query)
+        url = f"https://www.foundit.in/srp/results?query={urllib.parse.quote(job_role)}"
+        results.append(_create_fallback_job("Monster", job_role, url, 30, f"Monster scraping failed. Click to search for {job_role} jobs."))
 
     return results
 
 
-def scrape_wellfound(page, query, skills):
-    """Scrape actual job listings from Wellfound (AngelList)."""
+def scrape_wellfound(page, query, skills, experience_level=""):
+    """
+    Scrape actual job listings from Wellfound (AngelList).
+    Maps technical skills to proper startup job roles for better results.
+    """
     results = []
     try:
-        dash_query = query.replace(' ', '-').lower()
-        url = f"https://wellfound.com/role/l/{dash_query}"
-        print(f"    [Wellfound] Navigating to: {url}")
-        page.goto(url, wait_until="networkidle", timeout=20000)
-        page.wait_for_timeout(2000)
+        # Map skill to proper startup job role
+        job_role = get_wellfound_search_role(query)
+        # Fix: Wellfound uses /role/[role-slug], NOT /role/l/[role-slug]
+        dash_query = job_role.replace(' ', '-').lower()
+        url = f"https://wellfound.com/role/{dash_query}"
+        print(f"    [Wellfound] Mapped '{query}' -> '{job_role}', navigating to: {url}")
+        page.goto(url, wait_until="domcontentloaded", timeout=25000)
+        page.wait_for_timeout(1500)
+        
+        # Check if blocked
+        if _is_blocked(page.content()):
+            print(f"    [Wellfound] Blocked by CAPTCHA, returning search link")
+            return [_create_fallback_job("Wellfound", job_role, url, 45)]
 
         soup = BeautifulSoup(page.content(), "html.parser")
         job_cards = soup.find_all('div', class_=re.compile(r'styles__JobCard'))
-        
+
         if not job_cards:
             job_cards = soup.find_all('a', href=re.compile(r'/jobs/'))
             print(f"    [Wellfound] Found {len(job_cards)} jobs with fallback")
@@ -617,10 +1283,19 @@ def scrape_wellfound(page, query, skills):
                     })
             except Exception as e:
                 continue
-                
+
         print(f"    [Wellfound] Extracted {len(results)} relevant jobs")
+        
+        # If no jobs scraped, return fallback
+        if not results:
+            job_role = get_wellfound_search_role(query)
+            url = f"https://wellfound.com/role/{job_role.replace(' ', '-').lower()}"
+            results.append(_create_fallback_job("Wellfound", job_role, url, 35))
     except Exception as e:
         print(f"    [Wellfound] Scraping failed: {e}")
+        job_role = get_wellfound_search_role(query)
+        url = f"https://wellfound.com/role/{job_role.replace(' ', '-').lower()}"
+        results.append(_create_fallback_job("Wellfound", job_role, url, 30, f"Wellfound scraping failed. Click to search for {job_role} startup jobs."))
 
     return results
 
@@ -629,11 +1304,18 @@ def scrape_upwork(page, query, skills):
     """Scrape actual job listings from Upwork."""
     results = []
     try:
-        encoded_query = urllib.parse.quote(query)
+        # Map skill to freelance job title
+        job_role = get_upwork_search_role(query)
+        encoded_query = urllib.parse.quote(job_role)
         url = f"https://www.upwork.com/nx/search/jobs/?q={encoded_query}"
-        print(f"    [Upwork] Navigating to: {url}")
-        page.goto(url, wait_until="networkidle", timeout=20000)
-        page.wait_for_timeout(2000)
+        print(f"    [Upwork] Mapped '{query}' -> '{job_role}', navigating to: {url}")
+        page.goto(url, wait_until="domcontentloaded", timeout=25000)
+        page.wait_for_timeout(1500)
+        
+        # Check if blocked
+        if _is_blocked(page.content()):
+            print(f"    [Upwork] Blocked, returning search link")
+            return [_create_fallback_job("Upwork", job_role, url, 45)]
 
         soup = BeautifulSoup(page.content(), "html.parser")
         job_cards = soup.find_all('div', class_=re.compile(r'JobTile'))
@@ -676,16 +1358,176 @@ def scrape_upwork(page, query, skills):
                 continue
                 
         print(f"    [Upwork] Extracted {len(results)} relevant jobs")
+        
+        # If no jobs scraped, return fallback
+        if not results:
+            job_role = get_upwork_search_role(query)
+            url = f"https://www.upwork.com/nx/search/jobs/?q={urllib.parse.quote(job_role)}"
+            results.append(_create_fallback_job("Upwork", job_role, url, 35))
     except Exception as e:
         print(f"    [Upwork] Scraping failed: {e}")
+        job_role = get_upwork_search_role(query)
+        url = f"https://www.upwork.com/nx/search/jobs/?q={urllib.parse.quote(job_role)}"
+        results.append(_create_fallback_job("Upwork", job_role, url, 30, f"Upwork scraping failed. Click to search for {job_role} freelance jobs."))
 
     return results
 
 
-def get_dynamic_job_links(skills, level, job_type="Full-time"):
+def scrape_dice(page, query, skills, location=""):
+    """Scrape actual job listings from Dice.com (Tech jobs)."""
+    results = []
+    try:
+        # Map skill to tech job role
+        job_role = get_indeed_search_role(query)  # Use same mappings
+        
+        # Add location
+        search_query = job_role
+        if location:
+            search_query += f" {location}"
+        
+        encoded_query = urllib.parse.quote(search_query)
+        url = f"https://www.dice.com/jobs?q={encoded_query}"
+        print(f"    [Dice] Mapped '{query}' -> '{search_query}', navigating to: {url}")
+        page.goto(url, wait_until="domcontentloaded", timeout=25000)
+        page.wait_for_timeout(1500)
+        
+        # Check if blocked
+        if _is_blocked(page.content()):
+            print(f"    [Dice] Blocked, returning search link")
+            return [_create_fallback_job("Dice", job_role, url, 45)]
+
+        soup = BeautifulSoup(page.content(), "html.parser")
+        
+        # Dice uses card-based layout
+        job_cards = soup.find_all('div', class_=re.compile(r'card-content'))
+        
+        if not job_cards:
+            job_cards = soup.find_all('article', class_=re.compile(r'job'))
+        
+        if not job_cards:
+            job_cards = soup.find_all('a', href=re.compile(r'/job-view/'))
+            print(f"    [Dice] Found {len(job_cards)} jobs with fallback")
+        else:
+            print(f"    [Dice] Found {len(job_cards)} jobs")
+
+        for card in job_cards[:8]:
+            try:
+                title_elem = card.find('a', class_=re.compile(r'title'))
+                if not title_elem:
+                    title_elem = card.find('h2').find('a') if card.find('h2') else None
+                
+                if not title_elem:
+                    continue
+
+                title = title_elem.text.strip()
+                link = title_elem.get('href', '')
+                if not link.startswith('http'):
+                    link = f"https://www.dice.com{link}" if link else ""
+
+                company_elem = card.find('a', class_=re.compile(r'company'))
+                company = company_elem.text.strip() if company_elem else "Dice Employer"
+
+                desc_elem = card.find('p', class_=re.compile(r'[Dd]escription'))
+                description = desc_elem.text.strip()[:300] if desc_elem else f"Tech job matching: {query}"
+
+                relevance = calculate_relevance_score(title, description, skills)
+                if relevance > 0:
+                    results.append({
+                        "name": "Dice",
+                        "title": title,
+                        "company": company,
+                        "url": link,
+                        "description": description,
+                        "source": "Dice",
+                        "relevance_score": relevance
+                    })
+            except Exception as e:
+                continue
+
+        print(f"    [Dice] Extracted {len(results)} relevant jobs")
+        
+        # If no jobs scraped, return fallback
+        if not results:
+            job_role = get_indeed_search_role(query)
+            url = f"https://www.dice.com/jobs?q={urllib.parse.quote(job_role)}"
+            results.append(_create_fallback_job("Dice", job_role, url, 35))
+    except Exception as e:
+        print(f"    [Dice] Scraping failed: {e}")
+        job_role = get_indeed_search_role(query)
+        url = f"https://www.dice.com/jobs?q={urllib.parse.quote(job_role)}"
+        results.append(_create_fallback_job("Dice", job_role, url, 30, f"Dice scraping failed. Click to search for {job_role} tech jobs."))
+
+    return results
+
+
+def scrape_weworkremotely(page, query, skills):
+    """Scrape actual job listings from WeWorkRemotely (Remote jobs)."""
+    results = []
+    try:
+        # Map skill to remote job role
+        job_role = get_upwork_search_role(query)  # Use freelance mappings for remote
+        dash_query = job_role.replace(' ', '-').lower()
+        url = f"https://weworkremotely.com/remote-jobs/search?term={dash_query}"
+        print(f"    [WeWorkRemotely] Mapped '{query}' -> '{job_role}', navigating to: {url}")
+        page.goto(url, wait_until="domcontentloaded", timeout=25000)
+        page.wait_for_timeout(1500)
+
+        soup = BeautifulSoup(page.content(), "html.parser")
+        
+        # WeWorkRemotely uses list-based layout
+        job_cards = soup.find_all('li', class_=re.compile(r'job'))
+        
+        if not job_cards:
+            job_cards = soup.find_all('a', class_=re.compile(r'job'))
+            print(f"    [WeWorkRemotely] Found {len(job_cards)} jobs with fallback")
+        else:
+            print(f"    [WeWorkRemotely] Found {len(job_cards)} jobs")
+
+        for card in job_cards[:8]:
+            try:
+                title_elem = card.find('a', class_=re.compile(r'job'))
+                if not title_elem:
+                    title_elem = card.find('span', class_=re.compile(r'title'))
+                
+                if not title_elem:
+                    continue
+
+                title = title_elem.text.strip()
+                link = title_elem.get('href', '')
+                if not link.startswith('http'):
+                    link = f"https://weworkremotely.com{link}" if link else ""
+
+                company_elem = card.find('span', class_=re.compile(r'company'))
+                company = company_elem.text.strip() if company_elem else "Remote Employer"
+
+                description = f"Remote opportunity for {query}"
+
+                relevance = calculate_relevance_score(title, description, skills)
+                if relevance > 0:
+                    results.append({
+                        "name": "WeWorkRemotely",
+                        "title": title,
+                        "company": company,
+                        "url": link,
+                        "description": description,
+                        "source": "WeWorkRemotely",
+                        "relevance_score": relevance
+                    })
+            except Exception as e:
+                continue
+
+        print(f"    [WeWorkRemotely] Extracted {len(results)} relevant jobs")
+    except Exception as e:
+        print(f"    [WeWorkRemotely] Scraping failed: {e}")
+
+    return results
+
+
+def get_dynamic_job_links(skills, level, job_type="Full-time", experience_level="", location=""):
     """
     Dynamically scrapes actual job postings from multiple websites.
     Searches for EACH SKILL INDIVIDUALLY to maximize job results.
+    Uses experience level and location for better targeting.
     """
     if not skills:
         return []
@@ -694,12 +1536,35 @@ def get_dynamic_job_links(skills, level, job_type="Full-time"):
     cleaned_skills = [clean_skill_for_search(s) for s in skills if len(s) > 2]
     seen = set()
     unique_skills = [x for x in cleaned_skills if not (x in seen or seen.add(x))]
+    
+    # Limit to top 15 skills to avoid timeout
+    if len(unique_skills) > 15:
+        print(f"\n⚠ Limiting to top 15 skills (had {len(unique_skills)}) to avoid timeout")
+        unique_skills = unique_skills[:15]
 
     all_scraped = []
     all_seen_urls = set()
+    
+    # Define global job sites to scrape (add more for diversity)
+    global_scraper_config = {
+        "LinkedIn": {"enabled": True, "function": None},
+        "Indeed": {"enabled": True, "function": None},
+        "Glassdoor": {"enabled": True, "function": None},
+        "Wellfound": {"enabled": True, "function": None},
+        "Monster": {"enabled": True, "function": None},
+        "Naukri": {"enabled": True, "function": None},
+        "TimesJobs": {"enabled": True, "function": None},
+        "Internshala": {"enabled": True, "function": None},
+        "Upwork": {"enabled": job_type == "Freelance", "function": None},
+        "Dice": {"enabled": True, "function": None},  # NEW: Tech jobs
+        "WeWorkRemotely": {"enabled": job_type in ["Full-time", "Part-time", "Freelance"], "function": None},  # NEW: Remote jobs
+    }
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(
+            headless=True,
+            args=['--no-sandbox', '--disable-dev-shm-usage']  # Prevent crashes
+        )
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             viewport={'width': 1280, 'height': 720}
@@ -707,51 +1572,76 @@ def get_dynamic_job_links(skills, level, job_type="Full-time"):
         page = context.new_page()
         Stealth().apply_stealth_sync(page)
 
+        # Set longer timeout for slow sites
+        page.set_default_timeout(30000)  # 30 seconds
+
         # Search for EACH skill individually
         for skill_idx, skill in enumerate(unique_skills):
-            print(f"\n=== Searching for skill #{skill_idx + 1}: '{skill}' ===")
-            
-            # Define scrapers for this skill
+            print(f"\n=== Searching for skill #{skill_idx + 1}/{len(unique_skills)}: '{skill}' ===")
+            print(f"    Experience: {experience_level or level}, Location: {location or 'Any'}")
+
+            # Define scrapers for this skill with experience and location
             scrapers = {
-                "Indeed": lambda: scrape_indeed(page, skill, unique_skills),
-                "LinkedIn": lambda: scrape_linkedin(page, skill, unique_skills),
-                "TimesJobs": lambda: scrape_timesjobs(page, skill, unique_skills),
-                "Naukri": lambda: scrape_naukri(page, skill, unique_skills),
-                "Internshala": lambda: scrape_internshala(page, skill, unique_skills, job_type),
-                "Glassdoor": lambda: scrape_glassdoor(page, skill, unique_skills),
-                "Monster": lambda: scrape_monster(page, skill, unique_skills),
-                "Wellfound": lambda: scrape_wellfound(page, skill, unique_skills),
-                "Upwork": lambda: scrape_upwork(page, skill, unique_skills) if job_type == "Freelance" else []
+                "Indeed": lambda: scrape_indeed(page, skill, unique_skills, experience_level or level, location),
+                "LinkedIn": lambda: scrape_linkedin(page, skill, unique_skills, experience_level or level, location),
+                "TimesJobs": lambda: scrape_timesjobs(page, skill, unique_skills, experience_level or level, location),
+                "Naukri": lambda: scrape_naukri(page, skill, unique_skills, experience_level or level, location),
+                "Internshala": lambda: scrape_internshala(page, skill, unique_skills, job_type, experience_level or level),
+                "Glassdoor": lambda: scrape_glassdoor(page, skill, unique_skills, experience_level or level, location),
+                "Monster": lambda: scrape_monster(page, skill, unique_skills, experience_level or level, location),
+                "Wellfound": lambda: scrape_wellfound(page, skill, unique_skills, experience_level or level),
+                "Upwork": lambda: scrape_upwork(page, skill, unique_skills) if job_type == "Freelance" else [],
+                "Dice": lambda: scrape_dice(page, skill, unique_skills, location),
+                "WeWorkRemotely": lambda: scrape_weworkremotely(page, skill, unique_skills),
             }
 
             # Try each scraper for this skill
             for scraper_name, scraper_func in scrapers.items():
-                try:
-                    print(f"  Scraping {scraper_name} for '{skill}'...")
-                    scraped = scraper_func()
+                # Skip disabled scrapers
+                if scraper_name in global_scraper_config and not global_scraper_config[scraper_name]["enabled"]:
+                    continue
                     
+                try:
+                    print(f"  🔄 Scraping {scraper_name} for '{skill}'...")
+                    
+                    # Add timeout wrapper
+                    scraped = []
+                    try:
+                        scraped = scraper_func()
+                    except Exception as inner_e:
+                        print(f"    ⚠ {scraper_name} inner error: {inner_e}")
+                        scraped = []
+
                     if scraped:
                         # Filter out duplicates and jobs with 0 relevance
+                        new_count = 0
                         for job in scraped:
                             url = job.get('url', '')
                             if url and url not in all_seen_urls and url != '#' and job.get('relevance_score', 0) > 0:
                                 all_seen_urls.add(url)
                                 all_scraped.append(job)
-                        
-                        print(f"    -> Got {len(scraped)} jobs ({len([j for j in scraped if j.get('relevance_score', 0) > 0])} relevant)")
+                                new_count += 1
+
+                        print(f"    ✅ Got {len(scraped)} jobs ({new_count} new, {len(scraped)-new_count} duplicates)")
                     else:
-                        print(f"    -> No jobs found")
+                        print(f"    ❌ No jobs found")
 
                     # Small delay between requests to avoid detection
-                    time.sleep(random.uniform(1.5, 3))
+                    time.sleep(random.uniform(1, 2))
 
                 except Exception as e:
-                    print(f"    -> {scraper_name} failed: {e}")
+                    print(f"    ❌ {scraper_name} failed: {str(e)[:100]}")
+                    # Don't crash, continue to next scraper
                     continue
-            
+
             # If we have enough jobs, we can stop searching
             if len(all_scraped) >= 30:
-                print(f"\n✓ Found {len(all_scraped)} jobs, stopping early")
+                print(f"\n✅ Found {len(all_scraped)} jobs, stopping early")
+                break
+            
+            # Safety: stop after 8 skills to prevent timeout
+            if skill_idx >= 7:
+                print(f"\n⏱ Reached 8 skills limit, stopping to avoid timeout")
                 break
 
         browser.close()
@@ -760,4 +1650,7 @@ def get_dynamic_job_links(skills, level, job_type="Full-time"):
     all_scraped.sort(key=lambda x: x.get('relevance_score', 0), reverse=True)
 
     print(f"\n=== Total jobs found: {len(all_scraped)} ===")
+    for i, job in enumerate(all_scraped[:5]):
+        print(f"  {i+1}. {job.get('title', 'N/A')} at {job.get('company', 'N/A')} ({job.get('source', 'N/A')}) - Score: {job.get('relevance_score', 0)}")
+    
     return all_scraped[:30]

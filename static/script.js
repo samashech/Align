@@ -106,9 +106,14 @@ async function handleResumeUpload() {
     }
 
     const jobType = document.getElementById('jobType').value;
+    const experienceLevel = document.getElementById('experienceLevel').value;
+    const preferredLocation = document.getElementById('preferredLocation').value;
+    
     const formData = new FormData();
     formData.append('resume', file);
     formData.append('job_type', jobType);
+    formData.append('experience_level', experienceLevel);
+    formData.append('preferred_location', preferredLocation);
 
     try {
         // Step 1: Extracting skills
