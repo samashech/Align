@@ -148,6 +148,13 @@ def background_scrape_job(user_id, skills, level, job_type, experience_level, lo
 
             # Save each job to database and stream to client
             for idx, job in enumerate(jobs):
+                # Check if job already exists for this user (deduplicate)
+                job_url = job.get('url', '#')
+                if job_url != '#':
+                    existing = JobMatch.query.filter_by(user_id=user_id, url=job_url).first()
+                    if existing:
+                        continue
+
                 # Check if stopped mid-save
                 if not state.get('scraping', False):
                     print(f"🛑 Scraping stopped during job save (job {idx+1}/{len(jobs)}), aborting")
@@ -619,25 +626,15 @@ def upload_file():
 
     db.session.commit()
 
-    # Initialize scraping state for this user
+    # Initialize scraping state for this user but DO NOT start scraping yet
     scraping_state[user.id] = {
         'jobs': [],
-        'scraping': True,
+        'scraping': False,
         'finished': False,
         'queue': Queue(),
         'total_skills': len(user_profile['skills']),
         'processed_skills': 0
     }
-
-    # Start background scraping
-    scrape_thread = threading.Thread(
-        target=background_scrape_job,
-        args=(user.id, user_profile['skills'], user_profile['level'], 
-              job_type, experience_level if experience_level else user_profile['level'],
-              preferred_location),
-        daemon=True
-    )
-    scrape_thread.start()
 
     # Return profile data and redirect info
     return jsonify({
@@ -653,6 +650,61 @@ def upload_file():
         "resume_url": f"/uploads/{file.filename}",
         "redirect": "/complete-profile"
     })
+
+@app.route('/start-scraping', methods=['POST'])
+def start_scraping():
+    """Triggered by the user to start background scraping after resume upload."""
+    data = request.json
+    user_id = data.get('user_id')
+    job_type = data.get('job_type', 'Full-time')
+    experience_level = data.get('experience_level', '')
+    preferred_location = data.get('preferred_location', '')
+
+    # Normalize job type for the scraper ("Full Time" -> "Full-time")
+    if job_type == "Full Time":
+        job_type = "Full-time"
+    elif job_type == "Part Time":
+        job_type = "Part-time"
+
+    if not user_id:
+        return jsonify({"error": "User ID required"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # Delete old jobs for this user to avoid confusion and duplication
+    try:
+        JobMatch.query.filter_by(user_id=user.id).delete()
+        db.session.commit()
+        print(f"🧹 Cleared old jobs for user {user.id}")
+    except Exception as e:
+        print(f"⚠ Error clearing old jobs: {e}")
+        db.session.rollback()
+
+    # Re-initialize scraping state just in case it was modified
+    skills_list = [s.strip() for s in user.skills.split(',') if s.strip()]
+    
+    scraping_state[user.id] = {
+        'jobs': [],
+        'scraping': True,
+        'finished': False,
+        'queue': Queue(),
+        'total_skills': len(skills_list),
+        'processed_skills': 0
+    }
+
+    # Start background scraping
+    scrape_thread = threading.Thread(
+        target=background_scrape_job,
+        args=(user.id, skills_list, user.level, 
+              job_type, experience_level if experience_level else user.level,
+              preferred_location),
+        daemon=True
+    )
+    scrape_thread.start()
+
+    return jsonify({"success": True, "message": "Scraping started"})
 
 @app.route('/update-profile', methods=['POST'])
 def update_profile():

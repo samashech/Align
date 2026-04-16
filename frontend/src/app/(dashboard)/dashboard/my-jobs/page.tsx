@@ -38,7 +38,7 @@ type FilterValues = {
 };
 
 export default function MyJobsPage() {
-  const { jobs } = useAppState();
+  const { jobs, fetchJobs } = useAppState();
   const [skills, setSkills] = useState<string[]>([]);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -126,7 +126,7 @@ export default function MyJobsPage() {
           message: data.error || "Failed to upload resume"
         });
       }
-    } catch (error) {
+    } catch {
       setUploadStatus({
         success: false,
         message: "Network error during upload"
@@ -153,24 +153,55 @@ export default function MyJobsPage() {
       message: "🚀 Scraping started! Finding jobs across multiple platforms..."
     });
 
+    try {
+      const startRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/start-scraping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: uploadStatus.userId, job_type: 'Full-time' })
+      });
+      
+      if (!startRes.ok) {
+        throw new Error('Failed to start scraping');
+      }
+    } catch {
+      setUploading(false);
+      setScrapingStarted(false);
+      setUploadStatus({
+        success: false,
+        message: "Could not connect to the scraping server. Please try again."
+      });
+      return;
+    }
+
     // Wait for scraping to complete (check every 5 seconds)
     const checkScraping = async () => {
-      for (let i = 0; i < 60; i++) { // Check for up to 5 minutes
+      for (let i = 0; i < 120; i++) { // Check for up to 10 minutes
         await new Promise(resolve => setTimeout(resolve, 5000));
         
         try {
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/debug-jobs/${uploadStatus.userId}`);
           const data = await response.json();
           
-          if (data.finished || data.jobs_in_db > 0) {
+          if (data.finished) {
             setUploading(false);
             setUploadStatus({
               success: true,
-              message: `✅ Found ${data.jobs_in_db} jobs! Scroll down to view.`
+              message: `✅ Finished! Found ${data.jobs_in_db} jobs! Scroll down to view.`
             });
-            // Trigger jobs reload
-            window.location.reload();
+            // Trigger jobs reload via Context ONLY when fully finished
+            await fetchJobs(String(uploadStatus.userId));
+            setScrapingStarted(false);
+            setShowDoneButton(false);
             return;
+          } else {
+             // Inform user that it's still working without fetching jobs yet
+             const elapsedMin = Math.floor((i * 5) / 60);
+             const elapsedSec = (i * 5) % 60;
+             const timeStr = `${elapsedMin}:${elapsedSec.toString().padStart(2, '0')}`;
+             setUploadStatus({
+               success: true,
+               message: `🚀 Scraping in progress (${timeStr} elapsed). This process searches 10+ job boards and can take 2-5 minutes. Please don't refresh...`
+             });
           }
         } catch (error) {
           console.error('Error checking scraping status:', error);
@@ -181,7 +212,7 @@ export default function MyJobsPage() {
       setUploading(false);
       setUploadStatus({
         success: false,
-        message: "Scraping is taking longer than expected. Jobs will appear when ready."
+        message: "Scraping timed out or is taking too long. Jobs will appear when ready."
       });
     };
 
@@ -204,7 +235,9 @@ export default function MyJobsPage() {
         const byRegion = job.region === region;
         const byLocation = stateOrContinent === "All" || job.stateOrContinent === stateOrContinent;
         const byType =
-          !selectedTypes.length || selectedTypes.some((selected) => job.type.includes(selected as JobType));
+          !selectedTypes.length || selectedTypes.some((selected) => 
+            job.type.some(t => t.replace('-', ' ').toLowerCase() === selected.toLowerCase())
+          );
         return byRegion && byLocation && byType;
       })
       .map((job) => {
@@ -336,16 +369,25 @@ export default function MyJobsPage() {
             </div>
 
             {/* Done Button - appears after resume upload */}
-            {showDoneButton && !scrapingStarted && (
+            {showDoneButton && (
               <button
                 type="button"
                 onClick={handleDoneClick}
-                disabled={uploading}
+                disabled={uploading || scrapingStarted}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-3 text-sm font-semibold text-white transition hover:from-cyan-400 hover:to-blue-400 shadow-lg shadow-cyan-500/25"
               >
-                <CheckCircle className="h-5 w-5" />
-                Done - Start Scraping
-                <ArrowRight className="h-4 w-4" />
+                {scrapingStarted ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Scraping Jobs...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-5 w-5" />
+                    Done - Start Scraping
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
               </button>
             )}
 

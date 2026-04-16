@@ -99,6 +99,37 @@ def clean_skill_for_search(skill):
     return skill
 
 
+def normalize_url(url):
+    """
+    Normalizes a job URL by removing common tracking and session parameters.
+    Ensures that identical jobs with different tracking IDs are treated as one.
+    """
+    if not url or url == '#' or not url.startswith('http'):
+        return url
+    try:
+        parsed = urllib.parse.urlparse(url)
+        query = urllib.parse.parse_qs(parsed.query)
+        
+        # Tracking/Session parameters to remove
+        junk_params = [
+            'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+            'src', 'sid', 'sp', 'ref', 'click_id', 'aff_id', 'tracking',
+            'jobsearchDesk', 'searchId', 'applySrc', 'sid', 'clickid', 'gl',
+            'source', 'f', 'itid', 'job_role', 'experience', 'location',
+            'q', 'search_query', 'search_id', 'pos', 'page', 'tmp', 'total_count'
+        ]
+        
+        for p in junk_params:
+            query.pop(p, None)
+            
+        new_query = urllib.parse.urlencode(query, doseq=True)
+        path = parsed.path.rstrip('/')
+        
+        return urllib.parse.urlunparse(parsed._replace(path=path, query=new_query, fragment=''))
+    except:
+        return url
+
+
 # Job role mapping for sites that need specific job titles (Glassdoor, etc.)
 GLASSDOOR_ROLE_EXPANSIONS = {
     # OS & Infrastructure
@@ -735,8 +766,13 @@ def scrape_indeed(page, query, skills, experience_level="", location=""):
         encoded_query = urllib.parse.quote(search_query)
         url = f"https://in.indeed.com/jobs?q={encoded_query}"
         print(f"    [Indeed] Mapped '{query}' -> '{search_query}', navigating to: {url}")
-        page.goto(url, wait_until="domcontentloaded", timeout=25000)
-        page.wait_for_timeout(1500)
+        
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=25000)
+            page.wait_for_timeout(1500)
+        except Exception as nav_e:
+            print(f"    [Indeed] Navigation failed: {str(nav_e)[:100]}")
+            return [_create_fallback_job("Indeed", job_role, url, 30)]
 
         soup = BeautifulSoup(page.content(), "html.parser")
         
@@ -2075,18 +2111,25 @@ def get_dynamic_job_links(skills, level, job_type="Full-time", experience_level=
     seen = set()
     unique_skills = [x for x in cleaned_skills if not (x in seen or seen.add(x))]
 
-    # Limit to top 15 skills to avoid timeout
-    if len(unique_skills) > 15:
-        print(f"\n⚠ Limiting to top 15 skills (had {len(unique_skills)}) to avoid timeout")
-        unique_skills = unique_skills[:15]
+    # Limit to top 5 skills to significantly improve speed
+    if len(unique_skills) > 5:
+        print(f"\n⚠ Limiting to top 5 skills (had {len(unique_skills)}) to avoid timeout")
+        unique_skills = unique_skills[:5]
 
     # Get sites for this job type
     sites_to_scrape = JOB_TYPE_SITES.get(job_type, JOB_TYPE_SITES["Full-time"])
+    # Limit to top 4 sites to improve speed
+    if len(sites_to_scrape) > 4:
+        sites_to_scrape = sites_to_scrape[:4]
+        
     print(f"\n🎯 Job Type: {job_type}")
     print(f"📋 Scraping {len(sites_to_scrape)} sites: {', '.join(sites_to_scrape)}")
 
     all_scraped = []
     all_seen_urls = set()
+    all_seen_job_keys = set() # Track (title, company) to catch repeats
+    failed_sources = set()
+    seen_fallbacks = set()  # Track which sources already gave a fallback link
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
@@ -2121,7 +2164,6 @@ def get_dynamic_job_links(skills, level, job_type="Full-time", experience_level=
                 "Upwork": lambda: scrape_upwork(page, skill, unique_skills),
                 "Dice": lambda: scrape_dice(page, skill, unique_skills, location),
                 "WeWorkRemotely": lambda: scrape_weworkremotely(page, skill, unique_skills),
-                # New job-type specific scrapers
                 "FlexJobs": lambda: scrape_flexjobs(page, skill, unique_skills, experience_level or level, location),
                 "Apna": lambda: scrape_apna(page, skill, unique_skills, experience_level or level, location),
                 "Snagajob": lambda: scrape_snagajob(page, skill, unique_skills, experience_level or level, location),
@@ -2135,7 +2177,7 @@ def get_dynamic_job_links(skills, level, job_type="Full-time", experience_level=
 
             # Filter scrapers based on job type
             for scraper_name in sites_to_scrape:
-                if scraper_name not in all_scrapers:
+                if scraper_name not in all_scrapers or scraper_name in failed_sources:
                     continue
 
                 scraper_func = all_scrapers[scraper_name]
@@ -2143,21 +2185,44 @@ def get_dynamic_job_links(skills, level, job_type="Full-time", experience_level=
                 try:
                     print(f"  🔄 Scraping {scraper_name} for '{skill}'...")
 
-                    # Add timeout wrapper
                     scraped = []
                     try:
                         scraped = scraper_func()
                     except Exception as inner_e:
-                        print(f"    ⚠ {scraper_name} inner error: {inner_e}")
+                        error_msg = str(inner_e)
+                        if "ERR_ADDRESS_UNREACHABLE" in error_msg:
+                            print(f"    ❌ {scraper_name} is UNREACHABLE. Skipping for this session.")
+                            failed_sources.add(scraper_name)
+                        else:
+                            print(f"    ⚠ {scraper_name} inner error: {error_msg[:100]}")
                         scraped = []
 
                     if scraped:
                         # Filter out duplicates and jobs with 0 relevance
                         new_count = 0
                         for job in scraped:
-                            url = job.get('url', '')
+                            raw_url = job.get('url', '')
+                            url = normalize_url(raw_url)
+                            source = job.get('name', 'Unknown')
+                            is_fallback = "Fallback" in job.get('source', '') or "Direct Link" in job.get('source', '')
+                            
+                            # Deduplicate by Title + Company
+                            job_key = (job.get('title', '').lower(), job.get('company', '').lower())
+                            
+                            # Only allow one fallback per source
+                            if is_fallback:
+                                if source in seen_fallbacks:
+                                    continue
+                                seen_fallbacks.add(source)
+                            elif job_key in all_seen_job_keys:
+                                continue
+
                             if url and url not in all_seen_urls and url != '#' and job.get('relevance_score', 0) > 0:
                                 all_seen_urls.add(url)
+                                if not is_fallback:
+                                    all_seen_job_keys.add(job_key)
+                                # Update job with normalized URL
+                                job['url'] = url
                                 all_scraped.append(job)
                                 new_count += 1
 
@@ -2170,17 +2235,11 @@ def get_dynamic_job_links(skills, level, job_type="Full-time", experience_level=
 
                 except Exception as e:
                     print(f"    ❌ {scraper_name} failed: {str(e)[:100]}")
-                    # Don't crash, continue to next scraper
                     continue
 
             # If we have enough jobs, we can stop searching
-            if len(all_scraped) >= 30:
+            if len(all_scraped) >= 40:
                 print(f"\n✅ Found {len(all_scraped)} jobs, stopping early")
-                break
-
-            # Safety: stop after 8 skills to prevent timeout
-            if skill_idx >= 7:
-                print(f"\n⏱ Reached 8 skills limit, stopping to avoid timeout")
                 break
 
         browser.close()
@@ -2189,7 +2248,4 @@ def get_dynamic_job_links(skills, level, job_type="Full-time", experience_level=
     all_scraped.sort(key=lambda x: x.get('relevance_score', 0), reverse=True)
 
     print(f"\n=== Total jobs found: {len(all_scraped)} ===")
-    for i, job in enumerate(all_scraped[:5]):
-        print(f"  {i+1}. {job.get('title', 'N/A')} at {job.get('company', 'N/A')} ({job.get('source', 'N/A')}) - Score: {job.get('relevance_score', 0)}")
-
-    return all_scraped[:30]
+    return all_scraped[:40]

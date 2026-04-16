@@ -19,6 +19,7 @@ type AppState = {
   toggleSaveJob: (jobId: string) => Promise<void>;
   applyJob: (jobId: string) => Promise<void>;
   getJobById: (jobId: string) => Job | undefined;
+  fetchJobs: (userId: string) => Promise<void>;
 };
 
 const AppStateContext = createContext<AppState | undefined>(undefined);
@@ -61,7 +62,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`${API_URL}/api/all-jobs/${userId}`);
       if (res.ok) {
         const data = await res.json();
-        const formattedJobs: Job[] = data.jobs.map((j: any) => ({
+        const formattedJobs: Job[] = (data.jobs || []).map((j: Record<string, any>) => ({
           id: String(j.id),
           title: j.title,
           company: j.company || "Unknown",
@@ -70,19 +71,27 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           source: j.source || "LinkedIn",
           sourceUrl: j.url,
           skills: j.skills || [],
-          type: j.type || [j.job_type || "Full Time"],
+          // Normalize job type from backend (e.g., "Full-time" -> "Full Time")
+          type: (j.type || [j.job_type || "Full Time"]).map((t: string) => {
+            const lower = t.toLowerCase();
+            if (lower.includes("full")) return "Full Time";
+            if (lower.includes("part")) return "Part Time";
+            if (lower.includes("remote")) return "Remote";
+            if (lower.includes("intern")) return "Internship";
+            return t as any;
+          }),
           region: j.region || "India",
           stateOrContinent: j.stateOrContinent || "All",
           relevance_score: j.relevance_score || 0,
         }));
         setJobs(formattedJobs);
-        
+
         // Populate saved jobs
-        const savedIds = data.jobs.filter((j: any) => j.saved).map((j: any) => String(j.id));
+        const savedIds = (data.jobs || []).filter((j: Record<string, any>) => j.saved).map((j: Record<string, any>) => String(j.id));
         setSavedJobIds(savedIds);
       }
     } catch (e) {
-      console.error("Failed to fetch jobs", e);
+      console.error("Failed to fetch jobs:", e);
     }
   };
 
@@ -91,11 +100,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`${API_URL}/api/applications/${userId}`);
       if (res.ok) {
         const data = await res.json();
-        const appliedIds = data.applications.map((a: any) => String(a.job_id));
+        const appliedIds = data.applications.map((a: Record<string, any>) => String(a.job_id));
         setAppliedJobIds(appliedIds);
       }
     } catch (e) {
-      console.error("Failed to fetch applications", e);
+      console.error(e);
     }
   };
 
@@ -314,6 +323,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     toggleSaveJob,
     applyJob,
     getJobById,
+    fetchJobs,
   };
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
