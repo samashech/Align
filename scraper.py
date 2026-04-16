@@ -2116,19 +2116,26 @@ def get_dynamic_job_links(skills, level, job_type="Full-time", experience_level=
         print(f"\n⚠ Limiting to top 5 skills (had {len(unique_skills)}) to avoid timeout")
         unique_skills = unique_skills[:5]
 
-    # Get sites for this job type
-    sites_to_scrape = JOB_TYPE_SITES.get(job_type, JOB_TYPE_SITES["Full-time"])
-    # Limit to top 4 sites to improve speed
-    if len(sites_to_scrape) > 4:
-        sites_to_scrape = sites_to_scrape[:4]
-        
+    # Combine all sites across all job types to ensure we search 11+ websites
+    all_possible_sites = []
+    for sites in JOB_TYPE_SITES.values():
+        all_possible_sites.extend(sites)
+    
+    # Add other scrapers that might not be in the default mapping
+    all_possible_sites.extend([
+        "TimesJobs", "Upwork", "FlexJobs", "Apna", "Snagajob", "Unstop", 
+        "WayUp", "Freelancer", "Fiverr", "PeoplePerHour", "Toptal"
+    ])
+    
+    # Remove duplicates but keep a consistent order
+    sites_to_scrape = list(dict.fromkeys(all_possible_sites))
+    
     print(f"\n🎯 Job Type: {job_type}")
     print(f"📋 Scraping {len(sites_to_scrape)} sites: {', '.join(sites_to_scrape)}")
 
     all_scraped = []
     all_seen_urls = set()
     all_seen_job_keys = set() # Track (title, company) to catch repeats
-    failed_sources = set()
     seen_fallbacks = set()  # Track which sources already gave a fallback link
 
     with sync_playwright() as p:
@@ -2177,7 +2184,7 @@ def get_dynamic_job_links(skills, level, job_type="Full-time", experience_level=
 
             # Filter scrapers based on job type
             for scraper_name in sites_to_scrape:
-                if scraper_name not in all_scrapers or scraper_name in failed_sources:
+                if scraper_name not in all_scrapers:
                     continue
 
                 scraper_func = all_scrapers[scraper_name]
@@ -2190,11 +2197,7 @@ def get_dynamic_job_links(skills, level, job_type="Full-time", experience_level=
                         scraped = scraper_func()
                     except Exception as inner_e:
                         error_msg = str(inner_e)
-                        if "ERR_ADDRESS_UNREACHABLE" in error_msg:
-                            print(f"    ❌ {scraper_name} is UNREACHABLE. Skipping for this session.")
-                            failed_sources.add(scraper_name)
-                        else:
-                            print(f"    ⚠ {scraper_name} inner error: {error_msg[:100]}")
+                        print(f"    ⚠ {scraper_name} inner error: {error_msg[:100]}")
                         scraped = []
 
                     if scraped:

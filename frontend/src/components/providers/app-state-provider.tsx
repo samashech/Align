@@ -126,7 +126,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           fetchApplications(String(data.user.id));
         }
       } catch (e) {
-        console.error("Session check failed", e);
+        console.warn("Session check failed (Backend might be offline or unreachable)");
       }
     };
     checkSession();
