@@ -14,6 +14,7 @@ type AppState = {
   jobs: Job[];
   registerUser: (user: AuthUser) => Promise<{ ok: boolean; message: string }>;
   loginUser: (email: string, password: string) => Promise<{ ok: boolean; message: string; attempts: number }>;
+  googleLogin: () => Promise<{ ok: boolean; message: string }>;
   logoutUser: () => Promise<void>;
   updateProfile: (profileData: ProfileData) => Promise<void>;
   toggleSaveJob: (jobId: string) => Promise<void>;
@@ -54,6 +55,22 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
   
   const [activities, setActivities] = useState<ActivityItem[]>([]);
+
+  // Firebase auth imports (these would be from our firebase.ts)
+  const handleGoogleAuth = async () => {
+    try {
+      const { auth, googleProvider } = await import("@/lib/firebase");
+      const { signInWithPopup } = await import("firebase/auth");
+      
+      const result = await signInWithPopup(auth, googleProvider);
+      const token = await result.user.getIdToken();
+      
+      return token;
+    } catch (error) {
+      console.error("Firebase Google login error:", error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
     setActivities(readStorage<ActivityItem[]>(STORAGE_KEYS.activities, []));
@@ -208,6 +225,39 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const googleLogin = async () => {
+    try {
+      const token = await handleGoogleAuth();
+      
+      const res = await fetch(`${API_URL}/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem(STORAGE_KEYS.failedAttempts, "0");
+        localStorage.setItem(STORAGE_KEYS.userId, String(data.user.id));
+        setCurrentUser({ fullName: data.user.name, email: data.user.email, password: "" });
+        setProfile({
+          ...defaultProfile,
+          fullName: data.user.name,
+          email: data.user.email,
+        });
+        
+        fetchJobs(String(data.user.id));
+        fetchApplications(String(data.user.id));
+        
+        return { ok: true, message: "Google Login successful." };
+      } else {
+        return { ok: false, message: data.error || "Google Login failed." };
+      }
+    } catch (e) {
+      return { ok: false, message: "Network error or popup closed." };
+    }
+  };
+
   const logoutUser = async () => {
     setCurrentUser(null);
     localStorage.removeItem(STORAGE_KEYS.userId);
@@ -323,6 +373,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     jobs,
     registerUser,
     loginUser,
+    googleLogin,
     logoutUser,
     updateProfile,
     toggleSaveJob,
