@@ -4,15 +4,39 @@
 
 ---
 
-## 🚀 Features
+## 🚀 Current Features
 
-- **Automated Resume Parsing**: Upload your PDF/DOCX resume, and Align will extract your core skills and determine your experience level using Natural Language Processing (spaCy).
-- **Parallel Multi-Source Scraping**: Powered by an advanced n8n workflow, Align simultaneously scrapes jobs, internships, and hackathons from **LinkedIn, Indeed, Glassdoor, Internshala, Unstop, and Google Jobs** in real-time.
-- **Global Dynamic Location Filtering**: Search for opportunities perfectly tailored to your region. Select any Indian State or filter across 15+ International Countries, and the backend dynamically routes ISO country codes and geo-coordinates to the respective scrapers.
-- **AI-Powered Data Standardization**: Integrates with **Ollama (LLM)** to intelligently ingest messy, unstructured HTML descriptions from 6 different platforms and parse them into a unified, strict JSON format.
-- **Rich Job Market Intelligence**: Automatically extracts and displays deep insights including full job descriptions, real application URLs, salary/stipend ranges, job functions, and application deadlines directly on the UI.
-- **Intelligent Dashboard UI**: A sleek, responsive frontend built with Next.js and Tailwind CSS featuring uniform `flex-grow` job cards, subtle missing-data fallbacks ("Apply to confirm"), and an automated "Hackathons" grouping tab to keep the filter bar clean.
-- **Intelligent Match Scoring**: Dynamically compares your extracted skills against job requirements to calculate a personalized percentage match score.
+- **Resume Parsing**: Upload your PDF resume, and Align will extract text using PyPDF2 and identify core skills and experience level (Fresher/Experienced) using regex matching against a predefined tech stack.
+- **Job Search Generation**: Based on your primary skills and level, the application dynamically constructs tailored search URLs for major platforms like Indeed, LinkedIn, Glassdoor, Wellfound, and Naukri.
+- **Data Visualization**: Generates a static trend chart (using Matplotlib and Seaborn) comparing your skills against simulated demand scores.
+- **Intelligent Dashboard UI**: A responsive web interface that handles resume uploads, displays your extracted profile, and presents the generated job search links.
+- **Mock Authentication & Scoring**: Currently features a preliminary mock authentication system and hardcoded match scores to demonstrate the intended user flow.
+
+---
+
+## 🗺️ Roadmap & Future Implementations
+
+We are actively working on realizing the full vision for Align. Here is our technical roadmap:
+
+### Phase 1: Realize Web Scraping Capabilities
+- **Implement Playwright Scraper**: Transition from URL generation to actual live scraping using `playwright.sync_api` and `playwright-stealth` to extract real job postings.
+- **Data Structuring**: Parse scraped HTML using BeautifulSoup4 to clean job descriptions for deep analysis.
+
+### Phase 2: Advanced NLP & Dynamic Scoring
+- **Dynamic Skill Extraction**: Replace hardcoded tech stack regex with a true NLP-based approach (e.g., spaCy or HuggingFace models) for dynamic skill identification.
+- **Algorithmic Match Scoring**: Implement a matching engine to calculate the intersection of resume skills and job requirements for a true, dynamic percentage match score.
+
+### Phase 3: Data Persistence
+- **Database Integration**: Integrate SQLite/PostgreSQL using SQLAlchemy, moving away from Flask session-based state management.
+- **State Management**: Persist user profiles, job history, and application tracking in the database.
+
+### Phase 4: Automation & Alerts
+- **Background Tasks**: Implement Celery or APScheduler to run scraping jobs periodically.
+- **Telegram Integration**: Fully integrate `notifier.py` with background tasks for automated daily/weekly job match alerts.
+
+### Phase 5: System Integration (n8n, Flask, Next.js)
+- Implement an automated pipeline where the Next.js frontend triggers an **n8n workflow**.
+- Utilize **Apify** and **Ollama (LLM)** within n8n to intelligently scrape and parse unstructured job descriptions into a unified JSON format.
 
 ---
 
@@ -26,12 +50,12 @@
 
 ### Backend & Data Science
 - **Server**: Python 3.10+ with Flask
-- **Database**: SQLite with SQLAlchemy (via Flask-SQLAlchemy)
-- **Automation & Orchestration**: n8n (Node-Based Workflow Automation)
-- **AI & LLMs**: Ollama (Local AI execution)
-- **Scraping**: Apify, Playwright, BeautifulSoup4
-- **NLP & Parsing**: spaCy, PyPDF2
+- **Scraping**: Playwright, BeautifulSoup4 (Planned)
+- **NLP & Parsing**: PyPDF2, Regular Expressions (spaCy Planned)
 - **Visualization**: Matplotlib, Seaborn, Pandas
+- **Automation & Orchestration**: n8n (Node-Based Workflow Automation - Planned)
+- **AI & LLMs**: Ollama (Local AI execution - Planned)
+- **Database**: SQLite with SQLAlchemy (Planned)
 
 ---
 
@@ -98,8 +122,8 @@ npm install
 cd ..
 ```
 
-### 5. AI & Automation Setup (Ollama & n8n)
-To power the intelligent data extraction, you need to configure the AI pipeline:
+### 5. AI & Automation Setup (Ollama & n8n - Planned integration)
+To power the future intelligent data extraction pipeline, you will need to configure the AI pipeline:
 
 1. **Start Ollama & Pull the Model**:
    Open a terminal and ensure your local Ollama instance has the required model:
@@ -108,10 +132,10 @@ To power the intelligent data extraction, you need to configure the AI pipeline:
    ```
 2. **Configure n8n**:
    - Start your n8n instance.
-   - Import your workflow into n8n.
+   - Import the workflow into n8n.
    - Ensure the **Apify node** is configured with your API key.
    - Ensure the **Ollama node** points to your local instance (usually `http://localhost:11434`) and is set to use the `llama3.1:8b` model.
-   - Ensure the **HTTP Request node** is configured to POST data back to `http://localhost:5000/api/receive-n8n-jobs`.
+   - Ensure the **HTTP Request node** is configured to POST data back to `http://localhost:5000/api/n8n-webhook/jobs`.
 
 ---
 
