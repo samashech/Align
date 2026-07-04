@@ -11,6 +11,8 @@ from analyzer import analyze_resume
 from scraper import get_dynamic_job_links
 from visualizer import generate_chart
 from models import db, User, JobMatch, Application
+import firebase_admin
+from firebase_admin import credentials, auth as firebase_auth
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -21,6 +23,18 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///raiot.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'raiot-secret-key-2026'
 db.init_app(app)
+
+# Initialize Firebase Admin
+firebase_cred_path = os.path.join(os.path.dirname(__file__), 'firebase-adminsdk.json')
+try:
+    if os.path.exists(firebase_cred_path):
+        cred = credentials.Certificate(firebase_cred_path)
+        firebase_admin.initialize_app(cred)
+        print("✅ Firebase Admin initialized.")
+    else:
+        print("⚠️ Firebase Admin credentials not found at firebase-adminsdk.json. Google Auth will fail.")
+except Exception as e:
+    print(f"⚠️ Failed to initialize Firebase Admin: {e}")
 
 # Global stores for real-time job streaming
 # Key: user_id, Value: {'jobs': [], 'scraping': bool, 'queue': Queue, 'finished': bool}
@@ -232,6 +246,83 @@ def signup():
         db.session.rollback()
         print(f"❌ Signup error: {e}")
         return jsonify({'error': 'Failed to create account'}), 500
+
+@app.route('/auth/google', methods=['POST'])
+def google_auth():
+    """Login or Signup using Firebase Google ID Token."""
+    data = request.get_json()
+    id_token = data.get('token')
+
+    if not id_token:
+        return jsonify({'error': 'No token provided'}), 400
+
+    try:
+        # Verify the token against Firebase
+        decoded_token = firebase_auth.verify_id_token(id_token)
+        email = decoded_token.get('email')
+        name = decoded_token.get('name')
+
+        if not email:
+            return jsonify({'error': 'Google account must have an email address'}), 400
+
+        # Check if user exists
+        user = User.query.filter_by(email=email).first()
+        
+        if not user:
+            # Create a new user if they don't exist
+            user = User(
+                name=name or 'Google User',
+                email=email,
+                password_hash='google-oauth-no-password' # Dummy password for OAuth users
+            )
+            db.session.add(user)
+            db.session.commit()
+            print(f"✅ Created new user from Google Login: {email}")
+
+        # Stop any active scraping for this user
+        stop_scraping_for_user(user.id)
+
+        # Create Flask session
+        session['user_id'] = user.id
+        session['user_email'] = user.email
+        session['user_name'] = user.name
+
+        has_resume_data = bool(user.skills and user.level)
+        profile_complete = all([user.skills, user.level, user.location, user.job_type, user.job_role])
+        existing_jobs_count = JobMatch.query.filter_by(user_id=user.id).count()
+
+        return jsonify({
+            'success': True,
+            'message': 'Google Authentication successful!',
+            'user': {
+                'id': user.id,
+                'name': user.name,
+                'email': user.email,
+                'skills': user.skills,
+                'level': user.level,
+                'location': user.location,
+                'job_type': user.job_type,
+                'job_role': user.job_role,
+                'resume_url': user.resume_url,
+                'about': user.about,
+                'projects': user.projects,
+                'achievements': user.achievements,
+                'education': user.education,
+                'certificates': user.certificates,
+                'positions_of_responsibility': user.positions_of_responsibility,
+                'social_github': user.social_github,
+                'social_linkedin': user.social_linkedin,
+                'social_portfolio': user.social_portfolio,
+                'photo_data_url': user.photo_data_url,
+                'has_resume_data': has_resume_data,
+                'profile_complete': profile_complete,
+                'existing_jobs_count': existing_jobs_count
+            }
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Google Auth token verification failed: {e}")
+        return jsonify({'error': 'Invalid or expired Google token. Please try again or check Firebase configuration.'}), 401
 
 
 @app.route('/auth/login', methods=['POST'])
