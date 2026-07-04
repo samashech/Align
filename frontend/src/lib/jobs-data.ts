@@ -13,6 +13,7 @@ export const jobsData: Job[] = [
     type: ["Full Time", "Remote"],
     region: "India",
     stateOrContinent: "Karnataka",
+    description: "Build robust frontend applications.",
   },
   {
     id: "j2",
@@ -26,6 +27,7 @@ export const jobsData: Job[] = [
     type: ["Full Time"],
     region: "India",
     stateOrContinent: "Maharashtra",
+    description: "Design and implement beautiful user interfaces.",
   },
   {
     id: "j3",
@@ -39,6 +41,7 @@ export const jobsData: Job[] = [
     type: ["Full Time"],
     region: "International",
     stateOrContinent: "Europe",
+    description: "Lead product development across the stack.",
   },
   {
     id: "j4",
@@ -52,6 +55,7 @@ export const jobsData: Job[] = [
     type: ["Internship", "Remote"],
     region: "India",
     stateOrContinent: "Delhi",
+    description: "Learn and grow as a frontend developer.",
   },
   {
     id: "j5",
@@ -65,6 +69,7 @@ export const jobsData: Job[] = [
     type: ["Remote", "Part Time"],
     region: "International",
     stateOrContinent: "North America",
+    description: "Create stunning and interactive UI experiences.",
   },
   {
     id: "j6",
@@ -78,6 +83,7 @@ export const jobsData: Job[] = [
     type: ["Full Time"],
     region: "India",
     stateOrContinent: "Telangana",
+    description: "Develop scalable enterprise React applications.",
   },
 ];
 

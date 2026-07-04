@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "actionmate-ai-79bd2"
+  },
+  "targets": {
+    "actionmate-ai-79bd2": {
+      "hosting": {
+        "align": [
+          "align-raiot"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

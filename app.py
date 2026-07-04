@@ -459,7 +459,7 @@ def stream_jobs(user_id):
             return
 
         # Send initial state immediately
-        yield f"data: {json.dumps({
+        init_data = {
             'type': 'init',
             'data': {
                 'jobs': state['jobs'],
@@ -468,7 +468,8 @@ def stream_jobs(user_id):
                 'total_skills': state.get('total_skills', 0),
                 'total_jobs': len(state['jobs'])
             }
-        })}\n\n"
+        }
+        yield f"data: {json.dumps(init_data)}\n\n"
 
         # Stream new jobs as they come in
         while not state.get('finished', False):
@@ -761,18 +762,18 @@ def receive_n8n_jobs():
         jobs_data = [data]
         
     for job_item in jobs_data:
-        # Check if Ollama wrapped it in 'content' with markdown JSON string
-        if 'content' in job_item and isinstance(job_item['content'], str):
+        # Check if LLM (Gemini/Ollama) wrapped it in 'content' or 'text' with markdown JSON string
+        llm_response = job_item.get('content') or job_item.get('text')
+        if llm_response and isinstance(llm_response, str):
             try:
                 import json
                 import re
                 # Try to extract JSON from markdown code blocks if present
-                content_str = job_item['content']
-                match = re.search(r'```(?:json)?\n(.*?)\n```', content_str, re.DOTALL)
+                match = re.search(r'```(?:json)?\n(.*?)\n```', llm_response, re.DOTALL)
                 if match:
                     parsed_content = json.loads(match.group(1))
                 else:
-                    parsed_content = json.loads(content_str)
+                    parsed_content = json.loads(llm_response)
                     
                 # Merge parsed content into the job_item, prioritizing parsed fields
                 job_item.update(parsed_content)
